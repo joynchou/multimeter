@@ -71,10 +71,7 @@ static unsigned char unit;
 /**************函数定义**************/
 
 /**
- * 开关引脚和adc引脚初始化
- * */
-/**
- * @description: 
+ * @description: 开关引脚和adc引脚初始化
  * @param {type} 
  * @return {type} 
  */
@@ -118,11 +115,10 @@ void VoltageMeterInit(){
     
 }
 /**
- * @description: 
+ * @description: //adc数值更新的回调函数
  * @param {type} 
  * @return {type} 
  */
-//adc数值更新的回调函数
 static void AdcInterrupt(int value){
     //更新数值
     ADC_Stop();
@@ -162,29 +158,38 @@ void closeVoltageMeter(){
     GPIO_ResetBits(VOLTAGE_GPIO_PORT,VOLTAGE_GPIO_PIN);
     //添加相应的硬件代码，如关闭adc，继电器等
     state=0;
+
 #ifdef DEBUG_MODE
     printf("voltageMeter is closed\n");
 #endif
+
 }
+
 /**
- * @description: 
+ * @description: //取得电压值，配合getU_Unit使用，用于直接驱动屏幕显示
  * @param {type} 
  * @return {type} 
  */
-//取得电压值，配合getU_Unit使用，用于直接驱动屏幕显示
 float getVoltage(){
     
+
     
     if(state){
 
+#ifndef SIMULATE_VALUE
         float adcVoltage=(raw_value/4096.0f)*3.3f;
         float realVoltage= (adcVoltage-REF_VOLTAGE)*DAMPING_FACTOR;
         voltage=realVoltage;
+#else 
+        voltage=5.12f;
         
+#endif
+
 #ifdef DEBUG_MODE
     printf("voltage is : %f v \n",voltage);
 #endif
-    return realVoltage ;
+
+    return voltage ;
     }
     else{
         return 0;
@@ -222,12 +227,10 @@ unsigned char getU_Unit(){
 }
 
 /**
- * @description: 
+ * @description: 数值更新函数，请尽量不要在其中进行耗时操作,会造成系统无响应（阻塞线程）
  * @param {type} 
  * @return {type} 
  */
-//数值更新函数，请尽量不要在其中进行耗时操作
-//会造成系统无响应（阻塞线程）
 void VoltageMeterLooper(){
     //放置能更新value的语句
     if(state){

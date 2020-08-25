@@ -36,8 +36,9 @@ extern void (*ADC_callbackFun)(int);
 //}
 
 /**
- * @description: 
- * @param {type} 
+ * @description: ADC模式设置
+ * @param {ADCx:设定哪一个adc，可以为ADC1，2，3
+ * 			channel:设定哪一个频道} 
  * @return {type} 
  */
 static void ADCx_Mode_Config_auto(char ADCx,char channel){
@@ -90,11 +91,10 @@ static void ADCx_Mode_Config_auto(char ADCx,char channel){
 //// 	ADC_SoftwareStartConvCmd(ADC_x, ENABLE);
 //}
 /**
- * @description: 
+ * @description: //adc中断设置
  * @param {type} 
  * @return {type} 
  */
-//adc中断设置
 static void ADC_NVIC_Config(void)
 {
   NVIC_InitTypeDef NVIC_InitStructure;
@@ -109,11 +109,10 @@ static void ADC_NVIC_Config(void)
   NVIC_Init(&NVIC_InitStructure);
 }
 /**
- * @description: 
+ * @description: //设置adc中断函数的回调函数
  * @param {type} 
  * @return {type} 
  */
-//设置adc中断函数的回调函数
 void setCallbackFunc(void (*callback)(int )){
 	
 	ADC_callbackFun=callback;
@@ -121,11 +120,10 @@ void setCallbackFunc(void (*callback)(int )){
 
 }
 /**
- * @description: 
+ * @description: //adc转换开始，转换自动连续进行
  * @param {type} 
  * @return {type} 
  */
-//adc转换开始，转换自动连续进行
 void ADC_Start(){
 
 
@@ -137,11 +135,10 @@ void ADC_Start(){
 	ADC_SoftwareStartConvCmd(ADC2, ENABLE);
 }
 /**
- * @description: 
+ * @description: //结束转换
  * @param {type} 
  * @return {type} 
  */
-//结束转换
 void ADC_Stop(){
 
 	ADC_Cmd(ADC2, DISABLE);

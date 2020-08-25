@@ -9,6 +9,7 @@
 #include "ResistanceMeter.h"
 #include "stm32f10x.h"
 #include "bsp_adc.h"
+#include "public.h"
 
 /**************宏定义**************/
 
@@ -64,6 +65,16 @@ void ResistanceMeter_GPIO_Init(){
 	GPIO_Init(RESISTANCE_ADC_GPIO_PORT, &GPIO_InitStruct);	
 
 }
+
+/**
+ * @description: //adc数值更新的回调函数
+ * @param {type} 
+ * @return {type} 
+ */
+static void AdcInterrupt(int value){
+    //更新数值
+    raw_value=value;
+}
 /**
  * @description: 
  * @param {type} 
@@ -71,7 +82,9 @@ void ResistanceMeter_GPIO_Init(){
  */
 void openResistanceMeter(){
 
+    setCallbackFunc(AdcInterrupt);
     GPIO_SetBits(RESISTANCE_GPIO_PORT,RESISTANCE_GPIO_PIN);
+    ADC_Start();
     state=1;
 }
 /**
@@ -81,7 +94,9 @@ void openResistanceMeter(){
  */
 void closeResistanceMeter(){
 
+    setCallbackFunc(NULL);
     GPIO_ResetBits(RESISTANCE_GPIO_PORT,RESISTANCE_GPIO_PIN);
+    ADC_Stop();
     state=0;
 }
 /**
@@ -92,16 +107,7 @@ void closeResistanceMeter(){
 unsigned char  getResistanceMeterState(){
     return state;
 }
-//adc数值更新的回调函数
-/**
- * @description: 
- * @param {type} 
- * @return {type} 
- */
-static void AdcInterrupt(int value){
-    //更新数值
-    raw_value=value;
-}
+
 /**
  * @description: 
  * @param {type} 
@@ -129,7 +135,12 @@ void ResistanceMeterInit(){
  */
 float getCurrentRes(){
 
+#ifndef SIMULATE_VALUE
     return raw_value;
+#else 
+    return 1200.0f;
+#endif
+    
 
 }
 /**

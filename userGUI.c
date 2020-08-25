@@ -12,12 +12,12 @@
 
 unsigned char holdTriggerSign;
 unsigned char mode;
+
 /**
- * @description: 
+ * @description: //设置屏幕显示的模式,仅仅会改变屏幕的显示，而不会真正改变电表模式
  * @param {type} 
  * @return {type} 
  */
-//设置屏幕显示的模式,仅仅会改变屏幕的显示，而不会真正改变电表模式
 void setDisplayMode(unsigned char mode){
 
     mode=mode;
@@ -38,18 +38,18 @@ void setDisplayMode(unsigned char mode){
     }
 
 }
-//获取当前显示模式
+
 /**
- * @description: 
+ * @description: //获取当前显示模式
  * @param {type} 
  * @return {type} 
  */
 unsigned char getDisplayMode(){
     return mode;
 }
-//绘制系统界面
+
 /**
- * @description: 
+ * @description: //绘制系统界面
  * @param {type} 
  * @return {type} 
  */
@@ -64,9 +64,9 @@ void drawOutline(){
     ILI9341_Clear(0,0,LCD_X_LENGTH,LCD_Y_LENGTH);
 
 }
-//hold功能
+
 /**
- * @description: 
+ * @description: hold功能
  * @param {type} 
  * @return {type} 
  */
@@ -80,9 +80,9 @@ void holdTrigger(){
     }
     holdTriggerSign=~holdTriggerSign;
 }
-//清空界面
+
 /**
- * @description: 
+ * @description: 清空界面
  * @param {type} 
  * @return {type} 
  */
@@ -90,9 +90,9 @@ void clearWindow(){
     LCD_SetColors(RED,WHITE);
     ILI9341_Clear(0,0,LCD_X_LENGTH,LCD_Y_LENGTH);
 }
-//设置主显示数字
+
 /**
- * @description: 
+ * @description: 设置主显示数字
  * @param {type} 
  * @return {type} 
  */
@@ -103,15 +103,16 @@ void setNumTitle(float num){
     ILI9341_DispStringLine_EN(LINE(1),dispBuff);
 
 }
-//设置显示的单位
+
 /**
- * @description: 
+ * @description: 设置显示的单位
  * @param {type} 
  * @return {type} 
  */
 void setUnit(unsigned char unit){
     
     switch(unit){
+
         case UNIT_V:ILI9341_DispStringLine_EN(LINE(2),"V"); break;
         case UNIT_MV:ILI9341_DispStringLine_EN(LINE(2),"mV"); break;
         case UNIT_UV:ILI9341_DispStringLine_EN(LINE(2),"uV"); break;

@@ -9,6 +9,7 @@
 #include "CurrentMeter.h"
 #include "stm32f10x.h"
 #include "bsp_adc.h"
+#include "public.h"
 
 /**************宏定义**************/
 
@@ -109,6 +110,8 @@ void openCurrentMeter(){
 
     setCallbackFunc(AdcInterrupt);
     GPIO_SetBits(CURRENT_GPIO_PORT,CURRENT_GPIO_PIN);
+    ADC_Start();
+    state=1;
 }
 /**
  * @description: 关闭电流表
@@ -117,7 +120,11 @@ void openCurrentMeter(){
  */
 void closeCurrentMeter(){
 
+
     GPIO_ResetBits(CURRENT_GPIO_PORT,CURRENT_GPIO_PIN);
+    ADC_Stop();
+    setCallbackFunc(NULL);
+    state=0;
 }
 /**
  * @description: 获得实时测量的电流
@@ -128,10 +135,16 @@ float getCurrent(){
     
     if(state){
 
+#ifndef SIMULATE_VALUE
         float adcVoltage=(raw_value/4096.0f)*3.3f;
         float realCurrent= (adcVoltage/GAIN)/(R8*0.001f);
         current=realCurrent;
         return current;
+#else
+
+        current=0.4f;
+        return current;
+#endif
     }
 }
 /**

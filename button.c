@@ -59,9 +59,9 @@ uint8_t Key_Scan(GPIO_TypeDef *GPIOx,uint16_t GPIO_Pin)
 	}
 	else return KEY_OFF;
 }
-//板载led初始化
+
 /**
- * @description: 
+ * @description: //板载led初始化
  * @param {type} 
  * @return {type} 
  */
@@ -91,7 +91,7 @@ void buttonLooper(){
             (*modeButtonFunc)();
         }
 
-        //modeButtonFunc();
+        
     }
     if(holdButtonFunc!=NULL){
         //加入判断按键按下的语句
@@ -102,7 +102,7 @@ void buttonLooper(){
 			LED_G_TOGGLE;
         }
 
-       // holdButtonFunc();
+      
     }
 }
 /**

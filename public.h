@@ -1,10 +1,8 @@
 /*
- * @Author: your name
+ * @文件描述:公共头文件及一些全局宏存放文件 
+ * @版本: 
+ * @作者: 周晨阳
  * @Date: 2020-08-24 10:39:33
- * @LastEditTime: 2020-08-24 11:40:29
- * @LastEditors: Please set LastEditors
- * @Description: In User Settings Edit
- * @FilePath: \USER\public.h
  */
 
 #ifndef _PUBLIC_H_
@@ -12,9 +10,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <stddef.h>
 //是否打开debug模式，打开之后串口会在某些函数内会有调试用的数据输出
 //注释此宏来关闭调试模式
 #define DEBUG_MODE
-
+//此宏控制是否要使用模拟的测量值来测试系统
+#define SIMULATE_VALUE
 #endif
