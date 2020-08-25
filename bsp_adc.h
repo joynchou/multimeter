@@ -33,7 +33,7 @@ void setCallbackFunc(void (*callback)());
 void ADC_Start();
 //ֹͣת��
 void ADC_Stop();
-void ADCx_Init_auto(char ADCx,char channel);
+void ADCx_Init_auto(ADC_TypeDef *  ADCx,char channel);
 #endif /* __BSP_ADC_H */
 
 

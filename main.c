@@ -33,14 +33,48 @@ int main()
         //放置各个模块的looper，模拟不同的线程运行
 
         //按键监听循环
-        buttonLooper();
+        //buttonLooper();
         //数值更新循环
         valueUpdateLooper();
-       
+        
         
     }
 }
 
+/**
+ * @description: 系统初始化函数
+ * @param {type} 
+ * @return {type} 
+ */
+void init(){
+	
+	
+	
+    //串口初始化
+    USART_Config();
+    //GUI初始化
+    GUIInit();
+    
+	  
+    //按键初始化
+    buttonInit();
+
+    //不同表初始化
+    VoltageMeterInit();
+    ResistanceMeterInit();
+    CurrentMeterInit();
+
+
+    //设置按键回调函数
+   setHoldButtonListener(onHoldButtonClicked);
+   setModeButtonListener(onModeButtonClicked);
+    
+    //设置初始模式为电压表
+    switchMode(MODE_CURRENT);
+    
+
+
+}
 /**
  * @description: 数值更新函数，根据当前模式自动开启相应的模块并更新屏幕显示
  * @param {type} 
@@ -67,36 +101,6 @@ void valueUpdateLooper(){
                 break;
 
         }
-
-}
-/**
- * @description: 系统初始化函数
- * @param {type} 
- * @return {type} 
- */
-void init(){
-	
-    //GUI初始化
-    GUIInit();
-    
-	USART_Config();
-    //按键初始化
-    buttonInit();
-    //设置按键回调函数
-    setHoldButtonListener(onHoldButtonClicked);
-    setModeButtonListener(onModeButtonClicked);
-
-    
-    //不同表初始化
-    VoltageMeterInit();
-    ResistanceMeterInit();
-    CurrentMeterInit();
-    
-    //设置初始模式为电压表
-	
-    switchMode(MODE_VOLTAGE);
-    
-
 
 }
 /**

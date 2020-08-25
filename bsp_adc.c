@@ -41,7 +41,7 @@ extern void (*ADC_callbackFun)(int);
  * 			channel:设定哪一个频道} 
  * @return {type} 
  */
-static void ADCx_Mode_Config_auto(char ADCx,char channel){
+static void ADCx_Mode_Config_auto(ADC_TypeDef * ADCx,char channel){
 	ADC_InitTypeDef ADC_InitStruct;
 	
 	ADC_APBxClock_FUN ( ADC_CLK, ENABLE );
@@ -133,6 +133,7 @@ void ADC_Start(){
 	while(ADC_GetCalibrationStatus(ADC2));
 	//开始转换
 	ADC_SoftwareStartConvCmd(ADC2, ENABLE);
+	
 }
 /**
  * @description: //结束转换
@@ -160,7 +161,7 @@ void ADCx_Init(void)
  * @param {type} 
  * @return {type} 
  */
-void ADCx_Init_auto(char ADCx,char channel){
+void ADCx_Init_auto(ADC_TypeDef *  ADCx,char channel){
 	ADC_NVIC_Config();
 	
 	ADCx_Mode_Config_auto(ADCx,channel);

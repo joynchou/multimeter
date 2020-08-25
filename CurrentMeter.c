@@ -89,7 +89,7 @@ static void Current_ADC_Init(){
 void CurrentMeterInit(){
 
     Current_GPIO_Init();
-    Current_ADC_Init();
+    printf("CurrentMeter Init   done...\n");  
 
 }
 /**
@@ -100,6 +100,9 @@ void CurrentMeterInit(){
 static void AdcInterrupt(int value){
     //更新数值
     raw_value=value;
+#ifdef ADC_RAW_VALUE
+    printf("currentMeter ADC raw :%d \n",value);
+#endif
 }
 /**
  * @description: 打开电流表
@@ -108,10 +111,15 @@ static void AdcInterrupt(int value){
  */
 void openCurrentMeter(){
 
+    Current_ADC_Init();
     setCallbackFunc(AdcInterrupt);
     GPIO_SetBits(CURRENT_GPIO_PORT,CURRENT_GPIO_PIN);
     ADC_Start();
     state=1;
+    
+#ifdef DEBUG_MODE
+    printf("CurrentMeter is open\n");
+#endif
 }
 /**
  * @description: 关闭电流表
@@ -125,6 +133,10 @@ void closeCurrentMeter(){
     ADC_Stop();
     setCallbackFunc(NULL);
     state=0;
+       
+#ifdef DEBUG_MODE
+    printf("CurrentMeter is closed\n");
+#endif
 }
 /**
  * @description: 获得实时测量的电流
@@ -139,12 +151,17 @@ float getCurrent(){
         float adcVoltage=(raw_value/4096.0f)*3.3f;
         float realCurrent= (adcVoltage/GAIN)/(R8*0.001f);
         current=realCurrent;
-        return current;
+        
 #else
-
+        //测试值
         current=0.4f;
-        return current;
+        
 #endif
+			
+#ifdef DEBUG_MODE
+    printf("current is :  %f a \n",current);
+#endif
+		return current;
     }
 }
 /**

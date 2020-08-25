@@ -27,17 +27,17 @@
 
 /**************以下数值自行定义**************/
 //外围电路电阻值，单位k，参见电路图中的电阻标注
-#define R1 900.0f
-#define R2 100.0f
+#define R1 1000.0f
+#define R2 101.1f
 
 #define R3 100.0f
 #define R4 100.0f
 #define R5 100.0f
-#define R6 1.0f
-#define R7 2.0f
+#define R6 0.997f
+#define R7 2.2f
 
-#define R16 5.9f
-#define R17 10.7f
+#define R16 5.38f
+#define R17 9.92f
 
 //参考电压,在1.65v左右，这样可以直接测量正负16.5v
 #define REF_VOLTAGE ((R16/(R16+R17))*5.0f)
@@ -110,8 +110,8 @@ void VoltageMeterInit(){
 
     Voltage_GPIO_Init();
 
-    ADCx_Init_auto(ADC2,VOLTAGE_ADC_CHANNEL);
-
+    
+    printf("VoltageMeter Init  done...\n");  
     
 }
 /**
@@ -124,7 +124,9 @@ static void AdcInterrupt(int value){
     ADC_Stop();
     //中间可以插入滤波语句，在这之间，adc不会更新数值，也不会产生中断
     raw_value=value;
-
+#ifdef ADC_RAW_VALUE
+    printf("voltageMeter ADC raw :%d \n",value);
+#endif
     ADC_Start();
 }
 /**
@@ -134,6 +136,7 @@ static void AdcInterrupt(int value){
  */
 void openVoltageMeter(){
    
+    ADCx_Init_auto(ADC2,VOLTAGE_ADC_CHANNEL);
     setCallbackFunc(AdcInterrupt);
     ADC_Start();
     //添加相应的硬件代码，如开启对应的adc
@@ -178,7 +181,7 @@ float getVoltage(){
 
 #ifndef SIMULATE_VALUE
         float adcVoltage=(raw_value/4096.0f)*3.3f;
-        float realVoltage= (adcVoltage-REF_VOLTAGE)*DAMPING_FACTOR;
+        float realVoltage= (adcVoltage-REF_VOLTAGE)/DAMPING_FACTOR;
         voltage=realVoltage;
 #else 
         voltage=5.12f;
@@ -186,7 +189,7 @@ float getVoltage(){
 #endif
 
 #ifdef DEBUG_MODE
-    printf("voltage is : %f v \n",voltage);
+    printf("voltage is :  %f v \n",voltage);
 #endif
 
     return voltage ;

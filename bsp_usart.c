@@ -1,6 +1,12 @@
+/*
+ * @æ–‡ä»¶æè¿°: 
+ * @ç‰ˆæœ¬: 
+ * @ä½œè€…: å‘¨æ™¨é˜³
+ * @Date: 2020-08-21 12:03:54
+ */
 
 /**
-  * @brief   µ÷ÊÔÓÃµÄprintf´®¿Ú£¬ÖØ¶¨Ïòprintfµ½´®¿Ú
+  * @brief   ï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½printfï¿½ï¿½ï¿½Ú£ï¿½ï¿½Ø¶ï¿½ï¿½ï¿½printfï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   */ 
 
 
@@ -8,69 +14,70 @@
 
 
  /**
-  * @brief  USART GPIO ÅäÖÃ,¹¤×÷²ÎÊýÅäÖÃ
-  * @param  ÎÞ
-  * @retval ÎÞ
+  * @brief  USART GPIO ï¿½ï¿½ï¿½ï¿½,ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  * @param  ï¿½ï¿½
+  * @retval ï¿½ï¿½
   */
 void USART_Config(void)
 {
 	GPIO_InitTypeDef GPIO_InitStructure;
 	USART_InitTypeDef USART_InitStructure;
 
-	// ´ò¿ª´®¿ÚGPIOµÄÊ±ÖÓ
+	// ï¿½ò¿ª´ï¿½ï¿½ï¿½GPIOï¿½ï¿½Ê±ï¿½ï¿½
 	DEBUG_USART_GPIO_APBxClkCmd(DEBUG_USART_GPIO_CLK, ENABLE);
 	
-	// ´ò¿ª´®¿ÚÍâÉèµÄÊ±ÖÓ
+	// ï¿½ò¿ª´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½
 	DEBUG_USART_APBxClkCmd(DEBUG_USART_CLK, ENABLE);
 
-	// ½«USART TxµÄGPIOÅäÖÃÎªÍÆÍì¸´ÓÃÄ£Ê½
+	// ï¿½ï¿½USART Txï¿½ï¿½GPIOï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ì¸´ï¿½ï¿½Ä£Ê½
 	GPIO_InitStructure.GPIO_Pin = DEBUG_USART_TX_GPIO_PIN;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_Init(DEBUG_USART_TX_GPIO_PORT, &GPIO_InitStructure);
 
-  // ½«USART RxµÄGPIOÅäÖÃÎª¸¡¿ÕÊäÈëÄ£Ê½
+  // ï¿½ï¿½USART Rxï¿½ï¿½GPIOï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½
 	GPIO_InitStructure.GPIO_Pin = DEBUG_USART_RX_GPIO_PIN;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
 	GPIO_Init(DEBUG_USART_RX_GPIO_PORT, &GPIO_InitStructure);
 	
-	// ÅäÖÃ´®¿ÚµÄ¹¤×÷²ÎÊý
-	// ÅäÖÃ²¨ÌØÂÊ
+	// ï¿½ï¿½ï¿½Ã´ï¿½ï¿½ÚµÄ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	// ï¿½ï¿½ï¿½Ã²ï¿½ï¿½ï¿½ï¿½ï¿½
 	USART_InitStructure.USART_BaudRate = DEBUG_USART_BAUDRATE;
-	// ÅäÖÃ ÕëÊý¾Ý×Ö³¤
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö³ï¿½
 	USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-	// ÅäÖÃÍ£Ö¹Î»
+	// ï¿½ï¿½ï¿½ï¿½Í£Ö¹Î»
 	USART_InitStructure.USART_StopBits = USART_StopBits_1;
-	// ÅäÖÃÐ£ÑéÎ»
+	// ï¿½ï¿½ï¿½ï¿½Ð£ï¿½ï¿½Î»
 	USART_InitStructure.USART_Parity = USART_Parity_No ;
-	// ÅäÖÃÓ²¼þÁ÷¿ØÖÆ
+	// ï¿½ï¿½ï¿½ï¿½Ó²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-	// ÅäÖÃ¹¤×÷Ä£Ê½£¬ÊÕ·¢Ò»Æð
+	// ï¿½ï¿½ï¿½Ã¹ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½ï¿½Õ·ï¿½Ò»ï¿½ï¿½
 	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-	// Íê³É´®¿ÚµÄ³õÊ¼»¯ÅäÖÃ
+	// ï¿½ï¿½É´ï¿½ï¿½ÚµÄ³ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	USART_Init(DEBUG_USARTx, &USART_InitStructure);
 
-	// Ê¹ÄÜ´®¿Ú
-	USART_Cmd(DEBUG_USARTx, ENABLE);	    
+	// Ê¹ï¿½Ü´ï¿½ï¿½ï¿½
+	USART_Cmd(DEBUG_USARTx, ENABLE);	
+	printf("USART init done...\n");    
 }
 
 
-///ÖØ¶¨Ïòc¿âº¯Êýprintfµ½´®¿Ú£¬ÖØ¶¨Ïòºó¿ÉÊ¹ÓÃprintfº¯Êý
+///ï¿½Ø¶ï¿½ï¿½ï¿½cï¿½âº¯ï¿½ï¿½printfï¿½ï¿½ï¿½ï¿½ï¿½Ú£ï¿½ï¿½Ø¶ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½printfï¿½ï¿½ï¿½ï¿½
 int fputc(int ch, FILE *f)
 {
-		/* ·¢ËÍÒ»¸ö×Ö½ÚÊý¾Ýµ½´®¿Ú */
+		/* ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½ï¿½Ýµï¿½ï¿½ï¿½ï¿½ï¿½ */
 		USART_SendData(DEBUG_USARTx, (uint8_t) ch);
 		
-		/* µÈ´ý·¢ËÍÍê±Ï */
+		/* ï¿½È´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
 		while (USART_GetFlagStatus(DEBUG_USARTx, USART_FLAG_TXE) == RESET);		
 	
 		return (ch);
 }
 
-///ÖØ¶¨Ïòc¿âº¯Êýscanfµ½´®¿Ú£¬ÖØÐ´Ïòºó¿ÉÊ¹ÓÃscanf¡¢getcharµÈº¯Êý
+///ï¿½Ø¶ï¿½ï¿½ï¿½cï¿½âº¯ï¿½ï¿½scanfï¿½ï¿½ï¿½ï¿½ï¿½Ú£ï¿½ï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½scanfï¿½ï¿½getcharï¿½Èºï¿½ï¿½ï¿½
 int fgetc(FILE *f)
 {
-		/* µÈ´ý´®¿ÚÊäÈëÊý¾Ý */
+		/* ï¿½È´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
 		while (USART_GetFlagStatus(DEBUG_USARTx, USART_FLAG_RXNE) == RESET);
 
 		return (int)USART_ReceiveData(DEBUG_USARTx);

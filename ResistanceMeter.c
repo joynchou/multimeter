@@ -74,6 +74,17 @@ void ResistanceMeter_GPIO_Init(){
 static void AdcInterrupt(int value){
     //更新数值
     raw_value=value;
+    #ifdef ADC_RAW_VALUE
+    printf("resistanceMeter ADC raw :%d \n",value);
+#endif
+}
+/**
+ * @description: 
+ * @param {type} 
+ * @return {type} 
+ */
+void ResistanceMeter_ADC_Init(){
+    ADCx_Init_auto(ADC2,RESISTANCE_ADC_CHANNEL);
 }
 /**
  * @description: 
@@ -81,11 +92,15 @@ static void AdcInterrupt(int value){
  * @return {type} 
  */
 void openResistanceMeter(){
-
+    ResistanceMeter_ADC_Init();
     setCallbackFunc(AdcInterrupt);
     GPIO_SetBits(RESISTANCE_GPIO_PORT,RESISTANCE_GPIO_PIN);
     ADC_Start();
     state=1;
+   
+#ifdef DEBUG_MODE
+    printf("ResistanceMeter is open\n");
+#endif
 }
 /**
  * @description: 
@@ -98,6 +113,10 @@ void closeResistanceMeter(){
     GPIO_ResetBits(RESISTANCE_GPIO_PORT,RESISTANCE_GPIO_PIN);
     ADC_Stop();
     state=0;
+      
+#ifdef DEBUG_MODE
+    printf("ResistanceMeter is closed\n");
+#endif
 }
 /**
  * @description: 
@@ -108,14 +127,7 @@ unsigned char  getResistanceMeterState(){
     return state;
 }
 
-/**
- * @description: 
- * @param {type} 
- * @return {type} 
- */
-void ResistanceMeter_ADC_Init(){
-    ADCx_Init_auto(ADC2,RESISTANCE_ADC_CHANNEL);
-}
+
 
 /**
  * @description: 
@@ -125,8 +137,8 @@ void ResistanceMeter_ADC_Init(){
 void ResistanceMeterInit(){
 
     ResistanceMeter_GPIO_Init();
-    ResistanceMeter_ADC_Init();
-
+    
+    printf("ResistanceMeter Init   done...\n");  
 }
 /**
  * @description: 

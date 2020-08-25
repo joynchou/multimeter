@@ -17,6 +17,7 @@
 /**************头文件**************/
 #include "button.h"
 #include <stddef.h>
+#include "public.h"
 
 
 //private function:
@@ -24,8 +25,8 @@
 //private var
 
 /**************变量声明**************/
-void (*modeButtonFunc)();
-void (*holdButtonFunc)();
+static void (*modeButtonFunc)();
+static void (*holdButtonFunc)();
 
 /**************函数定义**************/
 /**
@@ -49,7 +50,7 @@ void setHoldButtonListener(void (*callback)()){
  * @param {type} 
  * @return {type} 
  */
-uint8_t Key_Scan(GPIO_TypeDef *GPIOx,uint16_t GPIO_Pin)
+static uint8_t Key_Scan(GPIO_TypeDef *GPIOx,uint16_t GPIO_Pin)
 {
 	if( GPIO_ReadInputDataBit(GPIOx, GPIO_Pin) == KEY_ON )
 	{
@@ -79,7 +80,7 @@ void LED_GPIO_Config(void)
 }
 
 /**
- * @description: 
+ * @description: 按键检测，加入main主循环，注意，按键输入引脚不可以悬空
  * @param {type} 
  * @return {type} 
  */
@@ -99,21 +100,22 @@ void buttonLooper(){
         if(Key_Scan(KEY2_GPIO_PORT,KEY2_GPIO_PIN)){
             (*holdButtonFunc)();
             //按hold键led灯会反转
-			LED_G_TOGGLE;
+						LED_G_TOGGLE;
         }
 
       
     }
 }
 /**
- * @description: 
+ * @description: 按键初始化
  * @param {type} 
  * @return {type} 
  */
 void buttonInit(){
 
-	LED_GPIO_Config();
 	GPIO_InitTypeDef  GPIO_InitStruct;
+	LED_GPIO_Config();
+	
 	
 	RCC_APB2PeriphClockCmd(KEY1_GPIO_CLK, ENABLE);
 	
@@ -126,6 +128,8 @@ void buttonInit(){
 	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
 	
 	GPIO_Init(KEY2_GPIO_PORT, &GPIO_InitStruct);	
-
+	
+	printf("button init done...\n");
+}
 }
 

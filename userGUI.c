@@ -9,6 +9,7 @@
  * */
 #include "userGUI.h"
 #include <stdio.h>
+#include "public.h"
 
 unsigned char holdTriggerSign;
 unsigned char mode;
@@ -26,12 +27,15 @@ void setDisplayMode(unsigned char mode){
     {
     case MODE_VOLTAGE:
         ILI9341_DispStringLine_EN(LINE(0),"Voltage mode:");
+
         break;
     case MODE_CURRENT:
         ILI9341_DispStringLine_EN(LINE(0),"Current mode:");
+
         break;
     case MODE_RESISTANCE:
         ILI9341_DispStringLine_EN(LINE(0),"Resistence mode:");
+        
         break;
     default:
         break;
@@ -55,13 +59,13 @@ unsigned char getDisplayMode(){
  */
 void drawOutline(){
 
-    LCD_SetFont(&Font16x24);
+    LCD_SetFont(&Font24x32);
 	LCD_SetColors(RED,BLACK);
     ILI9341_Clear(0,0,LCD_X_LENGTH,LCD_Y_LENGTH);	
     ILI9341_DispStringLine_EN(LINE(0),"TFT init done......");
     ILI9341_DispStringLine_EN(LINE(1),"loading system ......");
-    LCD_SetColors(RED,WHITE);
-    ILI9341_Clear(0,0,LCD_X_LENGTH,LCD_Y_LENGTH);
+    LCD_SetColors(RED,BLACK);
+    //ILI9341_Clear(0,0,LCD_X_LENGTH,LCD_Y_LENGTH);
 
 }
 
@@ -98,7 +102,7 @@ void clearWindow(){
  */
 void setNumTitle(float num){
 
-    char dispBuff[100];
+    static char dispBuff[15];
     sprintf(dispBuff,"value : %f  ",num);
     ILI9341_DispStringLine_EN(LINE(1),dispBuff);
 
@@ -136,4 +140,5 @@ void GUIInit(){
     holdTriggerSign=0;
 	ILI9341_Init();
     drawOutline();
+    printf("GUI init done...\n");
 }
