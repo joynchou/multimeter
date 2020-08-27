@@ -47,7 +47,7 @@ static void ADCx_Mode_Config_auto(ADC_TypeDef * ADCx,char channel){
 	ADC_APBxClock_FUN ( ADC_CLK, ENABLE );
 	ADC_InitStruct.ADC_Mode = ADC_Mode_Independent;
 	ADC_InitStruct.ADC_ScanConvMode = DISABLE;
-	ADC_InitStruct.ADC_ContinuousConvMode = ENABLE;	
+	ADC_InitStruct.ADC_ContinuousConvMode = DISABLE;	
 	ADC_InitStruct.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
 	ADC_InitStruct.ADC_DataAlign = ADC_DataAlign_Right;
 	ADC_InitStruct.ADC_NbrOfChannel = 1;

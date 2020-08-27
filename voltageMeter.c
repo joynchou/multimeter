@@ -21,6 +21,7 @@
 #include <stddef.h>
 #include "stm32f10x.h"
 #include "public.h"
+
 /**************宏定义**************/
 #define OPEN 1
 #define CLOSED 0
@@ -55,6 +56,9 @@
 #define VOLTAGE_GPIO_PORT             GPIOC
 #define VOLTAGE_GPIO_CLK              RCC_APB2Periph_GPIOC
 
+//滤波的数值缓冲大小，越大滤波速度越慢
+#define BUFFER_SIZE 100
+
 /**************自定义数值到此完成**************/
 
 
@@ -67,7 +71,9 @@ static float raw_value;
 static float voltage;
 //当前单位
 static unsigned char unit;
-
+//滤波缓冲池
+static float buffer[BUFFER_SIZE];
+//Array *ar;
 /**************函数定义**************/
 
 /**
@@ -80,6 +86,7 @@ void Voltage_GPIO_Init(){
     //配置一个引脚用于控制输入
     GPIO_InitTypeDef  GPIO_InitStruct;
 	
+    //array_new(&ar);
 	RCC_APB2PeriphClockCmd(VOLTAGE_GPIO_CLK, ENABLE);
 	GPIO_InitStruct.GPIO_Pin = VOLTAGE_GPIO_PIN;
 	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_Out_PP;
@@ -123,11 +130,18 @@ static void AdcInterrupt(int value){
     //更新数值
     ADC_Stop();
     //中间可以插入滤波语句，在这之间，adc不会更新数值，也不会产生中断
+//    if(array_size(ar)<1000){
+//       // array_add(ar,&value);
+//    }
+//		else{
+//			
+//		}
+    //printf("array size :%d \n",array_size(ar));
     raw_value=value;
 #ifdef ADC_RAW_VALUE
     printf("voltageMeter ADC raw :%d \n",value);
 #endif
-    ADC_Start();
+    //ADC_Start();
 }
 /**
  * @description: 
@@ -175,7 +189,7 @@ void closeVoltageMeter(){
  */
 float getVoltage(){
     
-
+		//ADC_Start();
     
     if(state){
 
@@ -191,12 +205,13 @@ float getVoltage(){
 #ifdef DEBUG_MODE
     printf("voltage is :  %f v \n",voltage);
 #endif
-
+		ADC_Start();
     return voltage ;
     }
     else{
         return 0;
     }
+		
 }
 /**
  * @description: 

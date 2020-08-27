@@ -32,10 +32,10 @@ int main()
     while(1){
         //放置各个模块的looper，模拟不同的线程运行
 
-        //按键监听循环
-        //buttonLooper();
+        //按键监听循环,如果按键引脚悬空将会导致程序进入死循环
+         //buttonLooper();
         //数值更新循环
-        valueUpdateLooper();
+         valueUpdateLooper();
         
         
     }
@@ -70,7 +70,7 @@ void init(){
    setModeButtonListener(onModeButtonClicked);
     
     //设置初始模式为电压表
-    switchMode(MODE_CURRENT);
+    switchMode(MODE_VOLTAGE);
     
 
 
@@ -110,6 +110,7 @@ void valueUpdateLooper(){
  */
 void onHoldButtonClicked(){
     holdTrigger();
+    
 }
 /**
  * @description: 模式按键按下时切换模式

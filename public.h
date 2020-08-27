@@ -17,8 +17,10 @@
 //是否打开debug模式，打开之后串口会在某些函数内会有调试用的数据输出
 //注释此宏来关闭调试模式
 #define DEBUG_MODE
+
 //此宏控制是否要使用模拟的测量值来测试系统
 //#define SIMULATE_VALUE
+
 // 是否输出adc原始值，打开此宏会导致只能输出原始值无法输出其他
 //#define ADC_RAW_VALUE
 

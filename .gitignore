@@ -2,3 +2,6 @@
 .vscode/c_cpp_properties.json
 .vscode/settings.json
 USER.zip
+array.c
+array.h
+common.h

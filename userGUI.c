@@ -11,8 +11,12 @@
 #include <stdio.h>
 #include "public.h"
 
-unsigned char holdTriggerSign;
+//=1的时候代表屏幕被冻结
+unsigned char holdTriggerSign=0;
 unsigned char mode;
+
+static unsigned char last_Unit;
+static float last_value;
 
 /**
  * @description: //设置屏幕显示的模式,仅仅会改变屏幕的显示，而不会真正改变电表模式
@@ -59,7 +63,7 @@ unsigned char getDisplayMode(){
  */
 void drawOutline(){
 
-    LCD_SetFont(&Font24x32);
+    LCD_SetFont(&Font16x24);
 	LCD_SetColors(RED,BLACK);
     ILI9341_Clear(0,0,LCD_X_LENGTH,LCD_Y_LENGTH);	
     ILI9341_DispStringLine_EN(LINE(0),"TFT init done......");
@@ -76,7 +80,7 @@ void drawOutline(){
  */
 void holdTrigger(){
     LCD_ClearLine(LINE(3));
-    if(holdTriggerSign){
+    if(!holdTriggerSign){
         ILI9341_DispStringLine_EN(LINE(3),"HOLDING!");
     }
     else{
@@ -103,8 +107,15 @@ void clearWindow(){
 void setNumTitle(float num){
 
     static char dispBuff[15];
-    sprintf(dispBuff,"value : %f  ",num);
-    ILI9341_DispStringLine_EN(LINE(1),dispBuff);
+    if(!holdTriggerSign){
+        sprintf(dispBuff,"value : %f  ",num);
+        ILI9341_DispStringLine_EN(LINE(1),dispBuff);
+        last_value=num;
+    }
+    else{
+        sprintf(dispBuff,"value : %f  ",last_value);
+        ILI9341_DispStringLine_EN(LINE(1),dispBuff);
+    }
 
 }
 
@@ -113,9 +124,9 @@ void setNumTitle(float num){
  * @param {type} 
  * @return {type} 
  */
-void setUnit(unsigned char unit){
-    
-    switch(unit){
+
+static void drawUnitByCode(unsigned char code){
+    switch(code){
 
         case UNIT_V:ILI9341_DispStringLine_EN(LINE(2),"V"); break;
         case UNIT_MV:ILI9341_DispStringLine_EN(LINE(2),"mV"); break;
@@ -128,7 +139,19 @@ void setUnit(unsigned char unit){
         case UNIT_MOHM:ILI9341_DispStringLine_EN(LINE(2),"Mohm"); break;
 
         
+        }
+}
+void setUnit(unsigned char unit){
+    if(!holdTriggerSign){
+        
+        drawUnitByCode(unit);
+        last_Unit=unit;
     }
+    else{
+
+        drawUnitByCode(last_Unit);
+    }
+    
 }
 /**
  * @description: 
