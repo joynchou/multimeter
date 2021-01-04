@@ -1,522 +1,500 @@
-/*
- * @文件描述: TFT屏幕的驱动程序，使用了FSMC的方式驱动屏幕显示
- * @版本: 1.0
- * @作者: 周晨阳
- * @Date: 2020-08-21 11:53:57
- */
+/**
+  ******************************************************************************
+  * @file    bsp_ili9341_lcd.c
+  * @version V1.0
+  * @date    2013-xx-xx
+  * @brief   ili9341脪潞戮搂脝脕脟媒露炉
+  ******************************************************************************
+  * @attention
+  *
+  * 脢碌脩茅脝陆脤篓:卤眉禄冒 F103-脰赂脛脧脮脽 STM32 驴陋路垄掳氓 
+  * 脗脹脤鲁    :http://www.firebbs.cn
+  * 脤脭卤娄    :http://firestm32.taobao.com
+  *
+  ******************************************************************************
+  */
 
 #include "bsp_ili9341_lcd.h"
-#include "fonts.h"	
+#include "fonts.h"
 
-//根据液晶扫描方向而变化的XY像素宽度
-//调用ILI9341_GramScan函数设置方向时会自动更改
+//赂霉戮脻脪潞戮搂脡篓脙猫路陆脧貌露酶卤盲禄炉碌脛XY脧帽脣脴驴铆露脠
+//碌梅脫脙ILI9341_GramScan潞炉脢媒脡猫脰脙路陆脧貌脢卤禄谩脳脭露炉赂眉赂脛
 uint16_t LCD_X_LENGTH = ILI9341_LESS_PIXEL;
 uint16_t LCD_Y_LENGTH = ILI9341_MORE_PIXEL;
 
-//液晶屏扫描模式，本变量主要用于方便选择触摸屏的计算参数
-//参数可选值为0-7
-//调用ILI9341_GramScan函数设置方向时会自动更改
-//LCD刚初始化完成时会使用本默认值
+//脪潞戮搂脝脕脡篓脙猫脛拢脢陆拢卢卤戮卤盲脕驴脰梅脪陋脫脙脫脷路陆卤茫脩隆脭帽麓楼脙镁脝脕碌脛录脝脣茫虏脦脢媒
+//虏脦脢媒驴脡脩隆脰碌脦陋0-7
+//碌梅脫脙ILI9341_GramScan潞炉脢媒脡猫脰脙路陆脧貌脢卤禄谩脳脭露炉赂眉赂脛
+//LCD赂脮鲁玫脢录禄炉脥锚鲁脡脢卤禄谩脢鹿脫脙卤戮脛卢脠脧脰碌
 uint8_t LCD_SCAN_MODE = 6;
 
+static sFONT *LCD_Currentfonts = &Font8x16; //脫垄脦脛脳脰脤氓
+static uint16_t CurrentTextColor = BLACK;	//脟掳戮掳脡芦
+static uint16_t CurrentBackColor = WHITE;	//卤鲁戮掳脡芦
 
-static sFONT *LCD_Currentfonts = &Font8x16;  //英文字体
-static uint16_t CurrentTextColor   = BLACK;//前景色
-static uint16_t CurrentBackColor   = WHITE;//背景色
-
-static __inline void                 ILI9341_Write_Cmd           ( uint16_t usCmd );
-static __inline void                 ILI9341_Write_Data          ( uint16_t usData );
-static __inline uint16_t             ILI9341_Read_Data           ( void );
-static void                   ILI9341_Delay               ( __IO uint32_t nCount );
-static void                   ILI9341_GPIO_Config         ( void );
-static void                   ILI9341_FSMC_Config         ( void );
-static void                   ILI9341_REG_Config          ( void );
-static void                   ILI9341_SetCursor           ( uint16_t usX, uint16_t usY );
-static __inline void          ILI9341_FillColor           ( uint32_t ulAmout_Point, uint16_t usColor );
-static uint16_t               ILI9341_Read_PixelData      ( void );
-
-
-
+__inline void ILI9341_Write_Cmd(uint16_t usCmd);
+__inline void ILI9341_Write_Data(uint16_t usData);
+__inline uint16_t ILI9341_Read_Data(void);
+static void ILI9341_Delay(__IO uint32_t nCount);
+static void ILI9341_GPIO_Config(void);
+static void ILI9341_FSMC_Config(void);
+static void ILI9341_REG_Config(void);
+static void ILI9341_SetCursor(uint16_t usX, uint16_t usY);
+static __inline void ILI9341_FillColor(uint32_t ulAmout_Point, uint16_t usColor);
+static uint16_t ILI9341_Read_PixelData(void);
 
 /**
-  * @brief  向ILI9341写入命令
-  * @param  usCmd :要写入的命令（表寄存器地址）
-  * @retval 无
-  */	
-__inline void ILI9341_Write_Cmd ( uint16_t usCmd )
-{
-	* ( __IO uint16_t * ) ( FSMC_Addr_ILI9341_CMD ) = usCmd;
-	
-}
-
-
-/**
-  * @brief  向ILI9341写入数据
-  * @param  usData :要写入的数据
-  * @retval 无
-  */	
-__inline void ILI9341_Write_Data ( uint16_t usData )
-{
-	* ( __IO uint16_t * ) ( FSMC_Addr_ILI9341_DATA ) = usData;
-	
-}
-
-
-/**
-  * @brief  从ILI9341读取数据
-  * @param  无
-  * @retval 读取到的数据
-  */	
-__inline uint16_t ILI9341_Read_Data ( void )
-{
-	return ( * ( __IO uint16_t * ) ( FSMC_Addr_ILI9341_DATA ) );
-	
-}
-
-
-/**
-  * @brief  用于 ILI9341 简单延时函数
-  * @param  nCount ：延时计数值
-  * @retval 无
-  */	
-static void ILI9341_Delay ( __IO uint32_t nCount )
-{
-  for ( ; nCount != 0; nCount -- );
-	
-}
-
-
-/**
-  * @brief  初始化ILI9341的IO引脚
-  * @param  无
-  * @retval 无
+  * @brief  脧貌ILI9341脨麓脠毛脙眉脕卯
+  * @param  usCmd :脪陋脨麓脠毛碌脛脙眉脕卯拢篓卤铆录脛麓忙脝梅碌脴脰路拢漏
+  * @retval 脦脼
   */
-static void ILI9341_GPIO_Config ( void )
+__inline void ILI9341_Write_Cmd(uint16_t usCmd)
+{
+	*(__IO uint16_t *)(FSMC_Addr_ILI9341_CMD) = usCmd;
+}
+
+/**
+  * @brief  脧貌ILI9341脨麓脠毛脢媒戮脻
+  * @param  usData :脪陋脨麓脠毛碌脛脢媒戮脻
+  * @retval 脦脼
+  */
+__inline void ILI9341_Write_Data(uint16_t usData)
+{
+	*(__IO uint16_t *)(FSMC_Addr_ILI9341_DATA) = usData;
+}
+
+/**
+  * @brief  麓脫ILI9341露脕脠隆脢媒戮脻
+  * @param  脦脼
+  * @retval 露脕脠隆碌陆碌脛脢媒戮脻
+  */
+__inline uint16_t ILI9341_Read_Data(void)
+{
+	return (*(__IO uint16_t *)(FSMC_Addr_ILI9341_DATA));
+}
+
+/**
+  * @brief  脫脙脫脷 ILI9341 录貌碌楼脩脫脢卤潞炉脢媒
+  * @param  nCount 拢潞脩脫脢卤录脝脢媒脰碌
+  * @retval 脦脼
+  */
+static void ILI9341_Delay(__IO uint32_t nCount)
+{
+	for (; nCount != 0; nCount--)
+		;
+}
+
+/**
+  * @brief  鲁玫脢录禄炉ILI9341碌脛IO脪媒陆脜
+  * @param  脦脼
+  * @retval 脦脼
+  */
+static void ILI9341_GPIO_Config(void)
 {
 	GPIO_InitTypeDef GPIO_InitStructure;
 
-	/* 使能FSMC对应相应管脚时钟*/
-	RCC_APB2PeriphClockCmd ( 	
-													/*控制信号*/
-													ILI9341_CS_CLK|ILI9341_DC_CLK|ILI9341_WR_CLK|
-													ILI9341_RD_CLK	|ILI9341_BK_CLK|ILI9341_RST_CLK|
-													/*数据信号*/
-													ILI9341_D0_CLK|ILI9341_D1_CLK|	ILI9341_D2_CLK | 
-													ILI9341_D3_CLK | ILI9341_D4_CLK|ILI9341_D5_CLK|
-													ILI9341_D6_CLK | ILI9341_D7_CLK|ILI9341_D8_CLK|
-													ILI9341_D9_CLK | ILI9341_D10_CLK|ILI9341_D11_CLK|
-													ILI9341_D12_CLK | ILI9341_D13_CLK|ILI9341_D14_CLK|
-													ILI9341_D15_CLK	, ENABLE );
-		
-	
-	/* 配置FSMC相对应的数据线,FSMC-D0~D15 */	
+	/* 脢鹿脛脺FSMC露脭脫娄脧脿脫娄鹿脺陆脜脢卤脰脫*/
+	RCC_APB2PeriphClockCmd(
+		/*驴脴脰脝脨脜潞脜*/
+		ILI9341_CS_CLK | ILI9341_DC_CLK | ILI9341_WR_CLK |
+			ILI9341_RD_CLK | ILI9341_BK_CLK | ILI9341_RST_CLK |
+			/*脢媒戮脻脨脜潞脜*/
+			ILI9341_D0_CLK | ILI9341_D1_CLK | ILI9341_D2_CLK |
+			ILI9341_D3_CLK | ILI9341_D4_CLK | ILI9341_D5_CLK |
+			ILI9341_D6_CLK | ILI9341_D7_CLK | ILI9341_D8_CLK |
+			ILI9341_D9_CLK | ILI9341_D10_CLK | ILI9341_D11_CLK |
+			ILI9341_D12_CLK | ILI9341_D13_CLK | ILI9341_D14_CLK |
+			ILI9341_D15_CLK,
+		ENABLE);
+
+	/* 脜盲脰脙FSMC脧脿露脭脫娄碌脛脢媒戮脻脧脽,FSMC-D0~D15 */
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_InitStructure.GPIO_Mode =  GPIO_Mode_AF_PP;
-	
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+
 	GPIO_InitStructure.GPIO_Pin = ILI9341_D0_PIN;
-	GPIO_Init ( ILI9341_D0_PORT, & GPIO_InitStructure );
+	GPIO_Init(ILI9341_D0_PORT, &GPIO_InitStructure);
 
 	GPIO_InitStructure.GPIO_Pin = ILI9341_D1_PIN;
-	GPIO_Init ( ILI9341_D1_PORT, & GPIO_InitStructure );
-	
+	GPIO_Init(ILI9341_D1_PORT, &GPIO_InitStructure);
+
 	GPIO_InitStructure.GPIO_Pin = ILI9341_D2_PIN;
-	GPIO_Init ( ILI9341_D2_PORT, & GPIO_InitStructure );
-	
+	GPIO_Init(ILI9341_D2_PORT, &GPIO_InitStructure);
+
 	GPIO_InitStructure.GPIO_Pin = ILI9341_D3_PIN;
-	GPIO_Init ( ILI9341_D3_PORT, & GPIO_InitStructure );
-	
+	GPIO_Init(ILI9341_D3_PORT, &GPIO_InitStructure);
+
 	GPIO_InitStructure.GPIO_Pin = ILI9341_D4_PIN;
-	GPIO_Init ( ILI9341_D4_PORT, & GPIO_InitStructure );
-	
+	GPIO_Init(ILI9341_D4_PORT, &GPIO_InitStructure);
+
 	GPIO_InitStructure.GPIO_Pin = ILI9341_D5_PIN;
-	GPIO_Init ( ILI9341_D5_PORT, & GPIO_InitStructure );
-	
+	GPIO_Init(ILI9341_D5_PORT, &GPIO_InitStructure);
+
 	GPIO_InitStructure.GPIO_Pin = ILI9341_D6_PIN;
-	GPIO_Init ( ILI9341_D6_PORT, & GPIO_InitStructure );
-	
+	GPIO_Init(ILI9341_D6_PORT, &GPIO_InitStructure);
+
 	GPIO_InitStructure.GPIO_Pin = ILI9341_D7_PIN;
-	GPIO_Init ( ILI9341_D7_PORT, & GPIO_InitStructure );
-	
+	GPIO_Init(ILI9341_D7_PORT, &GPIO_InitStructure);
+
 	GPIO_InitStructure.GPIO_Pin = ILI9341_D8_PIN;
-	GPIO_Init ( ILI9341_D8_PORT, & GPIO_InitStructure );
-	
+	GPIO_Init(ILI9341_D8_PORT, &GPIO_InitStructure);
+
 	GPIO_InitStructure.GPIO_Pin = ILI9341_D9_PIN;
-	GPIO_Init ( ILI9341_D9_PORT, & GPIO_InitStructure );
-	
+	GPIO_Init(ILI9341_D9_PORT, &GPIO_InitStructure);
+
 	GPIO_InitStructure.GPIO_Pin = ILI9341_D10_PIN;
-	GPIO_Init ( ILI9341_D10_PORT, & GPIO_InitStructure );
-	
+	GPIO_Init(ILI9341_D10_PORT, &GPIO_InitStructure);
+
 	GPIO_InitStructure.GPIO_Pin = ILI9341_D11_PIN;
-	GPIO_Init ( ILI9341_D11_PORT, & GPIO_InitStructure );
+	GPIO_Init(ILI9341_D11_PORT, &GPIO_InitStructure);
 
 	GPIO_InitStructure.GPIO_Pin = ILI9341_D12_PIN;
-	GPIO_Init ( ILI9341_D12_PORT, & GPIO_InitStructure );	
-	
-	GPIO_InitStructure.GPIO_Pin = ILI9341_D13_PIN;
-	GPIO_Init ( ILI9341_D13_PORT, & GPIO_InitStructure );
-	
-	GPIO_InitStructure.GPIO_Pin = ILI9341_D14_PIN;
-	GPIO_Init ( ILI9341_D14_PORT, & GPIO_InitStructure );
-	
-	GPIO_InitStructure.GPIO_Pin = ILI9341_D15_PIN;
-	GPIO_Init ( ILI9341_D15_PORT, & GPIO_InitStructure );
-	
+	GPIO_Init(ILI9341_D12_PORT, &GPIO_InitStructure);
 
-	
-	/* 配置FSMC相对应的控制线
+	GPIO_InitStructure.GPIO_Pin = ILI9341_D13_PIN;
+	GPIO_Init(ILI9341_D13_PORT, &GPIO_InitStructure);
+
+	GPIO_InitStructure.GPIO_Pin = ILI9341_D14_PIN;
+	GPIO_Init(ILI9341_D14_PORT, &GPIO_InitStructure);
+
+	GPIO_InitStructure.GPIO_Pin = ILI9341_D15_PIN;
+	GPIO_Init(ILI9341_D15_PORT, &GPIO_InitStructure);
+
+	/* 脜盲脰脙FSMC脧脿露脭脫娄碌脛驴脴脰脝脧脽
 	 * FSMC_NOE   :LCD-RD
 	 * FSMC_NWE   :LCD-WR
 	 * FSMC_NE1   :LCD-CS
 	 * FSMC_A16  	:LCD-DC
 	 */
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_InitStructure.GPIO_Mode =  GPIO_Mode_AF_PP;
-	
-	GPIO_InitStructure.GPIO_Pin = ILI9341_RD_PIN; 
-	GPIO_Init (ILI9341_RD_PORT, & GPIO_InitStructure );
-	
-	GPIO_InitStructure.GPIO_Pin = ILI9341_WR_PIN; 
-	GPIO_Init (ILI9341_WR_PORT, & GPIO_InitStructure );
-	
-	GPIO_InitStructure.GPIO_Pin = ILI9341_CS_PIN; 
-	GPIO_Init ( ILI9341_CS_PORT, & GPIO_InitStructure );  
-	
-	GPIO_InitStructure.GPIO_Pin = ILI9341_DC_PIN; 
-	GPIO_Init ( ILI9341_DC_PORT, & GPIO_InitStructure );
-	
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
 
-  /* 配置LCD复位RST控制管脚*/
+	GPIO_InitStructure.GPIO_Pin = ILI9341_RD_PIN;
+	GPIO_Init(ILI9341_RD_PORT, &GPIO_InitStructure);
+
+	GPIO_InitStructure.GPIO_Pin = ILI9341_WR_PIN;
+	GPIO_Init(ILI9341_WR_PORT, &GPIO_InitStructure);
+
+	GPIO_InitStructure.GPIO_Pin = ILI9341_CS_PIN;
+	GPIO_Init(ILI9341_CS_PORT, &GPIO_InitStructure);
+
+	GPIO_InitStructure.GPIO_Pin = ILI9341_DC_PIN;
+	GPIO_Init(ILI9341_DC_PORT, &GPIO_InitStructure);
+
+	/* 脜盲脰脙LCD赂麓脦禄RST驴脴脰脝鹿脺陆脜*/
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	
-	GPIO_InitStructure.GPIO_Pin = ILI9341_RST_PIN; 
-	GPIO_Init ( ILI9341_RST_PORT, & GPIO_InitStructure );
-	
-	
-	/* 配置LCD背光控制管脚BK*/
+
+	GPIO_InitStructure.GPIO_Pin = ILI9341_RST_PIN;
+	GPIO_Init(ILI9341_RST_PORT, &GPIO_InitStructure);
+
+	/* 脜盲脰脙LCD卤鲁鹿芒驴脴脰脝鹿脺陆脜BK*/
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;  
-	
-	GPIO_InitStructure.GPIO_Pin = ILI9341_BK_PIN; 
-	GPIO_Init ( ILI9341_BK_PORT, & GPIO_InitStructure );
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+
+	GPIO_InitStructure.GPIO_Pin = ILI9341_BK_PIN;
+	GPIO_Init(ILI9341_BK_PORT, &GPIO_InitStructure);
 }
-
-
- /**
-  * @brief  LCD  FSMC 模式配置
-  * @param  无
-  * @retval 无
-  */
-static void ILI9341_FSMC_Config ( void )
-{
-	FSMC_NORSRAMInitTypeDef  FSMC_NORSRAMInitStructure;
-	FSMC_NORSRAMTimingInitTypeDef  readWriteTiming; 	
-	
-	/* 使能FSMC时钟*/
-	RCC_AHBPeriphClockCmd ( RCC_AHBPeriph_FSMC, ENABLE );
-
-	//地址建立时间（ADDSET）为1个HCLK 2/72M=28ns
-	readWriteTiming.FSMC_AddressSetupTime      = 0x01;	 //地址建立时间
-	//数据保持时间（DATAST）+ 1个HCLK = 5/72M=70ns	
-	readWriteTiming.FSMC_DataSetupTime         = 0x04;	 //数据建立时间
-	//选择控制的模式
-	//模式B,异步NOR FLASH模式，与ILI9341的8080时序匹配
-	readWriteTiming.FSMC_AccessMode            = FSMC_AccessMode_B;	
-	
-	/*以下配置与模式B无关*/
-	//地址保持时间（ADDHLD）模式A未用到
-	readWriteTiming.FSMC_AddressHoldTime       = 0x00;	 //地址保持时间
-	//设置总线转换周期，仅用于复用模式的NOR操作
-	readWriteTiming.FSMC_BusTurnAroundDuration = 0x00;
-	//设置时钟分频，仅用于同步类型的存储器
-	readWriteTiming.FSMC_CLKDivision           = 0x00;
-	//数据保持时间，仅用于同步型的NOR	
-	readWriteTiming.FSMC_DataLatency           = 0x00;	
-
-	
-	FSMC_NORSRAMInitStructure.FSMC_Bank                  = FSMC_Bank1_NORSRAMx;
-	FSMC_NORSRAMInitStructure.FSMC_DataAddressMux        = FSMC_DataAddressMux_Disable;
-	FSMC_NORSRAMInitStructure.FSMC_MemoryType            = FSMC_MemoryType_NOR;
-	FSMC_NORSRAMInitStructure.FSMC_MemoryDataWidth       = FSMC_MemoryDataWidth_16b;
-	FSMC_NORSRAMInitStructure.FSMC_BurstAccessMode       = FSMC_BurstAccessMode_Disable;
-	FSMC_NORSRAMInitStructure.FSMC_WaitSignalPolarity    = FSMC_WaitSignalPolarity_Low;
-	FSMC_NORSRAMInitStructure.FSMC_WrapMode              = FSMC_WrapMode_Disable;
-	FSMC_NORSRAMInitStructure.FSMC_WaitSignalActive      = FSMC_WaitSignalActive_BeforeWaitState;
-	FSMC_NORSRAMInitStructure.FSMC_WriteOperation        = FSMC_WriteOperation_Enable;
-	FSMC_NORSRAMInitStructure.FSMC_WaitSignal            = FSMC_WaitSignal_Disable;
-	FSMC_NORSRAMInitStructure.FSMC_ExtendedMode          = FSMC_ExtendedMode_Disable;
-	FSMC_NORSRAMInitStructure.FSMC_WriteBurst            = FSMC_WriteBurst_Disable;
-	FSMC_NORSRAMInitStructure.FSMC_ReadWriteTimingStruct = &readWriteTiming;
-	FSMC_NORSRAMInitStructure.FSMC_WriteTimingStruct     = &readWriteTiming;  
-	
-	FSMC_NORSRAMInit ( & FSMC_NORSRAMInitStructure ); 
-	
-	
-	/* 使能 FSMC_Bank1_NORSRAM4 */
-	FSMC_NORSRAMCmd ( FSMC_Bank1_NORSRAMx, ENABLE );  
-		
-		
-}
-
 
 /**
- * @brief  初始化ILI9341寄存器
- * @param  无
- * @retval 无
+  * @brief  LCD  FSMC 脛拢脢陆脜盲脰脙
+  * @param  脦脼
+  * @retval 脦脼
+  */
+static void ILI9341_FSMC_Config(void)
+{
+	FSMC_NORSRAMInitTypeDef FSMC_NORSRAMInitStructure;
+	FSMC_NORSRAMTimingInitTypeDef readWriteTiming;
+
+	/* 脢鹿脛脺FSMC脢卤脰脫*/
+	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_FSMC, ENABLE);
+
+	//碌脴脰路陆篓脕垄脢卤录盲拢篓ADDSET拢漏脦陋1赂枚HCLK 2/72M=28ns
+	readWriteTiming.FSMC_AddressSetupTime = 0x01; //碌脴脰路陆篓脕垄脢卤录盲
+	//脢媒戮脻卤拢鲁脰脢卤录盲拢篓DATAST拢漏+ 1赂枚HCLK = 5/72M=70ns
+	readWriteTiming.FSMC_DataSetupTime = 0x04; //脢媒戮脻陆篓脕垄脢卤录盲
+	//脩隆脭帽驴脴脰脝碌脛脛拢脢陆
+	//脛拢脢陆B,脪矛虏陆NOR FLASH脛拢脢陆拢卢脫毛ILI9341碌脛8080脢卤脨貌脝楼脜盲
+	readWriteTiming.FSMC_AccessMode = FSMC_AccessMode_B;
+
+	/*脪脭脧脗脜盲脰脙脫毛脛拢脢陆B脦脼鹿脴*/
+	//碌脴脰路卤拢鲁脰脢卤录盲拢篓ADDHLD拢漏脛拢脢陆A脦麓脫脙碌陆
+	readWriteTiming.FSMC_AddressHoldTime = 0x00; //碌脴脰路卤拢鲁脰脢卤录盲
+	//脡猫脰脙脳脺脧脽脳陋禄禄脰脺脝脷拢卢陆枚脫脙脫脷赂麓脫脙脛拢脢陆碌脛NOR虏脵脳梅
+	readWriteTiming.FSMC_BusTurnAroundDuration = 0x00;
+	//脡猫脰脙脢卤脰脫路脰脝碌拢卢陆枚脫脙脫脷脥卢虏陆脌脿脨脥碌脛麓忙麓垄脝梅
+	readWriteTiming.FSMC_CLKDivision = 0x00;
+	//脢媒戮脻卤拢鲁脰脢卤录盲拢卢陆枚脫脙脫脷脥卢虏陆脨脥碌脛NOR
+	readWriteTiming.FSMC_DataLatency = 0x00;
+
+	FSMC_NORSRAMInitStructure.FSMC_Bank = FSMC_Bank1_NORSRAMx;
+	FSMC_NORSRAMInitStructure.FSMC_DataAddressMux = FSMC_DataAddressMux_Disable;
+	FSMC_NORSRAMInitStructure.FSMC_MemoryType = FSMC_MemoryType_NOR;
+	FSMC_NORSRAMInitStructure.FSMC_MemoryDataWidth = FSMC_MemoryDataWidth_16b;
+	FSMC_NORSRAMInitStructure.FSMC_AsynchronousWait=FSMC_AsynchronousWait_Disable;
+	FSMC_NORSRAMInitStructure.FSMC_BurstAccessMode = FSMC_BurstAccessMode_Disable;
+	FSMC_NORSRAMInitStructure.FSMC_WaitSignalPolarity = FSMC_WaitSignalPolarity_Low;
+	FSMC_NORSRAMInitStructure.FSMC_WrapMode = FSMC_WrapMode_Disable;
+	FSMC_NORSRAMInitStructure.FSMC_WaitSignalActive = FSMC_WaitSignalActive_BeforeWaitState;
+	FSMC_NORSRAMInitStructure.FSMC_WriteOperation = FSMC_WriteOperation_Enable;
+	FSMC_NORSRAMInitStructure.FSMC_WaitSignal = FSMC_WaitSignal_Disable;
+	FSMC_NORSRAMInitStructure.FSMC_ExtendedMode = FSMC_ExtendedMode_Disable;
+	FSMC_NORSRAMInitStructure.FSMC_WriteBurst = FSMC_WriteBurst_Disable;
+	FSMC_NORSRAMInitStructure.FSMC_ReadWriteTimingStruct = &readWriteTiming;
+	FSMC_NORSRAMInitStructure.FSMC_WriteTimingStruct = &readWriteTiming;
+
+	FSMC_NORSRAMInit(&FSMC_NORSRAMInitStructure);
+
+	/* 脢鹿脛脺 FSMC_Bank1_NORSRAM4 */
+	FSMC_NORSRAMCmd(FSMC_Bank1_NORSRAMx, ENABLE);
+}
+
+/**
+ * @brief  鲁玫脢录禄炉ILI9341录脛麓忙脝梅
+ * @param  脦脼
+ * @retval 脦脼
  */
-static void ILI9341_REG_Config ( void )
+static void ILI9341_REG_Config(void)
 {
 	/*  Power control B (CFh)  */
-	DEBUG_DELAY  ();
-	ILI9341_Write_Cmd ( 0xCF  );
-	ILI9341_Write_Data ( 0x00  );
-	ILI9341_Write_Data ( 0x81  );
-	ILI9341_Write_Data ( 0x30  );
-	
+	DEBUG_DELAY();
+	ILI9341_Write_Cmd(0xCF);
+	ILI9341_Write_Data(0x00);
+	ILI9341_Write_Data(0x81);
+	ILI9341_Write_Data(0x30);
+
 	/*  Power on sequence control (EDh) */
-	DEBUG_DELAY ();
-	ILI9341_Write_Cmd ( 0xED );
-	ILI9341_Write_Data ( 0x64 );
-	ILI9341_Write_Data ( 0x03 );
-	ILI9341_Write_Data ( 0x12 );
-	ILI9341_Write_Data ( 0x81 );
-	
+	DEBUG_DELAY();
+	ILI9341_Write_Cmd(0xED);
+	ILI9341_Write_Data(0x64);
+	ILI9341_Write_Data(0x03);
+	ILI9341_Write_Data(0x12);
+	ILI9341_Write_Data(0x81);
+
 	/*  Driver timing control A (E8h) */
-	DEBUG_DELAY ();
-	ILI9341_Write_Cmd ( 0xE8 );
-	ILI9341_Write_Data ( 0x85 );
-	ILI9341_Write_Data ( 0x10 );
-	ILI9341_Write_Data ( 0x78 );
-	
+	DEBUG_DELAY();
+	ILI9341_Write_Cmd(0xE8);
+	ILI9341_Write_Data(0x85);
+	ILI9341_Write_Data(0x10);
+	ILI9341_Write_Data(0x78);
+
 	/*  Power control A (CBh) */
-	DEBUG_DELAY ();
-	ILI9341_Write_Cmd ( 0xCB );
-	ILI9341_Write_Data ( 0x39 );
-	ILI9341_Write_Data ( 0x2C );
-	ILI9341_Write_Data ( 0x00 );
-	ILI9341_Write_Data ( 0x34 );
-	ILI9341_Write_Data ( 0x02 );
-	
+	DEBUG_DELAY();
+	ILI9341_Write_Cmd(0xCB);
+	ILI9341_Write_Data(0x39);
+	ILI9341_Write_Data(0x2C);
+	ILI9341_Write_Data(0x00);
+	ILI9341_Write_Data(0x34);
+	ILI9341_Write_Data(0x02);
+
 	/* Pump ratio control (F7h) */
-	DEBUG_DELAY ();
-	ILI9341_Write_Cmd ( 0xF7 );
-	ILI9341_Write_Data ( 0x20 );
-	
+	DEBUG_DELAY();
+	ILI9341_Write_Cmd(0xF7);
+	ILI9341_Write_Data(0x20);
+
 	/* Driver timing control B */
-	DEBUG_DELAY ();
-	ILI9341_Write_Cmd ( 0xEA );
-	ILI9341_Write_Data ( 0x00 );
-	ILI9341_Write_Data ( 0x00 );
-	
+	DEBUG_DELAY();
+	ILI9341_Write_Cmd(0xEA);
+	ILI9341_Write_Data(0x00);
+	ILI9341_Write_Data(0x00);
+
 	/* Frame Rate Control (In Normal Mode/Full Colors) (B1h) */
-	DEBUG_DELAY ();
-	ILI9341_Write_Cmd ( 0xB1 );
-	ILI9341_Write_Data ( 0x00 );
-	ILI9341_Write_Data ( 0x1B );
-	
+	DEBUG_DELAY();
+	ILI9341_Write_Cmd(0xB1);
+	ILI9341_Write_Data(0x00);
+	ILI9341_Write_Data(0x1B);
+
 	/*  Display Function Control (B6h) */
-	DEBUG_DELAY ();
-	ILI9341_Write_Cmd ( 0xB6 );
-	ILI9341_Write_Data ( 0x0A );
-	ILI9341_Write_Data ( 0xA2 );
-	
+	DEBUG_DELAY();
+	ILI9341_Write_Cmd(0xB6);
+	ILI9341_Write_Data(0x0A);
+	ILI9341_Write_Data(0xA2);
+
 	/* Power Control 1 (C0h) */
-	DEBUG_DELAY ();
-	ILI9341_Write_Cmd ( 0xC0 );
-	ILI9341_Write_Data ( 0x35 );
-	
+	DEBUG_DELAY();
+	ILI9341_Write_Cmd(0xC0);
+	ILI9341_Write_Data(0x35);
+
 	/* Power Control 2 (C1h) */
-	DEBUG_DELAY ();
-	ILI9341_Write_Cmd ( 0xC1 );
-	ILI9341_Write_Data ( 0x11 );
-	
+	DEBUG_DELAY();
+	ILI9341_Write_Cmd(0xC1);
+	ILI9341_Write_Data(0x11);
+
 	/* VCOM Control 1 (C5h) */
-	ILI9341_Write_Cmd ( 0xC5 );
-	ILI9341_Write_Data ( 0x45 );
-	ILI9341_Write_Data ( 0x45 );
-	
+	ILI9341_Write_Cmd(0xC5);
+	ILI9341_Write_Data(0x45);
+	ILI9341_Write_Data(0x45);
+
 	/*  VCOM Control 2 (C7h)  */
-	ILI9341_Write_Cmd ( 0xC7 );
-	ILI9341_Write_Data ( 0xA2 );
-	
+	ILI9341_Write_Cmd(0xC7);
+	ILI9341_Write_Data(0xA2);
+
 	/* Enable 3G (F2h) */
-	ILI9341_Write_Cmd ( 0xF2 );
-	ILI9341_Write_Data ( 0x00 );
-	
+	ILI9341_Write_Cmd(0xF2);
+	ILI9341_Write_Data(0x00);
+
 	/* Gamma Set (26h) */
-	ILI9341_Write_Cmd ( 0x26 );
-	ILI9341_Write_Data ( 0x01 );
-	DEBUG_DELAY ();
-	
+	ILI9341_Write_Cmd(0x26);
+	ILI9341_Write_Data(0x01);
+	DEBUG_DELAY();
+
 	/* Positive Gamma Correction */
-	ILI9341_Write_Cmd ( 0xE0 ); //Set Gamma
-	ILI9341_Write_Data ( 0x0F );
-	ILI9341_Write_Data ( 0x26 );
-	ILI9341_Write_Data ( 0x24 );
-	ILI9341_Write_Data ( 0x0B );
-	ILI9341_Write_Data ( 0x0E );
-	ILI9341_Write_Data ( 0x09 );
-	ILI9341_Write_Data ( 0x54 );
-	ILI9341_Write_Data ( 0xA8 );
-	ILI9341_Write_Data ( 0x46 );
-	ILI9341_Write_Data ( 0x0C );
-	ILI9341_Write_Data ( 0x17 );
-	ILI9341_Write_Data ( 0x09 );
-	ILI9341_Write_Data ( 0x0F );
-	ILI9341_Write_Data ( 0x07 );
-	ILI9341_Write_Data ( 0x00 );
-	
+	ILI9341_Write_Cmd(0xE0); //Set Gamma
+	ILI9341_Write_Data(0x0F);
+	ILI9341_Write_Data(0x26);
+	ILI9341_Write_Data(0x24);
+	ILI9341_Write_Data(0x0B);
+	ILI9341_Write_Data(0x0E);
+	ILI9341_Write_Data(0x09);
+	ILI9341_Write_Data(0x54);
+	ILI9341_Write_Data(0xA8);
+	ILI9341_Write_Data(0x46);
+	ILI9341_Write_Data(0x0C);
+	ILI9341_Write_Data(0x17);
+	ILI9341_Write_Data(0x09);
+	ILI9341_Write_Data(0x0F);
+	ILI9341_Write_Data(0x07);
+	ILI9341_Write_Data(0x00);
+
 	/* Negative Gamma Correction (E1h) */
-	ILI9341_Write_Cmd ( 0XE1 ); //Set Gamma
-	ILI9341_Write_Data ( 0x00 );
-	ILI9341_Write_Data ( 0x19 );
-	ILI9341_Write_Data ( 0x1B );
-	ILI9341_Write_Data ( 0x04 );
-	ILI9341_Write_Data ( 0x10 );
-	ILI9341_Write_Data ( 0x07 );
-	ILI9341_Write_Data ( 0x2A );
-	ILI9341_Write_Data ( 0x47 );
-	ILI9341_Write_Data ( 0x39 );
-	ILI9341_Write_Data ( 0x03 );
-	ILI9341_Write_Data ( 0x06 );
-	ILI9341_Write_Data ( 0x06 );
-	ILI9341_Write_Data ( 0x30 );
-	ILI9341_Write_Data ( 0x38 );
-	ILI9341_Write_Data ( 0x0F );
-	
+	ILI9341_Write_Cmd(0XE1); //Set Gamma
+	ILI9341_Write_Data(0x00);
+	ILI9341_Write_Data(0x19);
+	ILI9341_Write_Data(0x1B);
+	ILI9341_Write_Data(0x04);
+	ILI9341_Write_Data(0x10);
+	ILI9341_Write_Data(0x07);
+	ILI9341_Write_Data(0x2A);
+	ILI9341_Write_Data(0x47);
+	ILI9341_Write_Data(0x39);
+	ILI9341_Write_Data(0x03);
+	ILI9341_Write_Data(0x06);
+	ILI9341_Write_Data(0x06);
+	ILI9341_Write_Data(0x30);
+	ILI9341_Write_Data(0x38);
+	ILI9341_Write_Data(0x0F);
+
 	/* memory access control set */
-	DEBUG_DELAY ();
-	ILI9341_Write_Cmd ( 0x36 ); 	
-	ILI9341_Write_Data ( 0xC8 );    /*竖屏  左上角到 (起点)到右下角 (终点)扫描方式*/
-	DEBUG_DELAY ();
-	
+	DEBUG_DELAY();
+	ILI9341_Write_Cmd(0x36);
+	ILI9341_Write_Data(0xC8); /*脢煤脝脕  脳贸脡脧陆脟碌陆 (脝冒碌茫)碌陆脫脪脧脗陆脟 (脰脮碌茫)脡篓脙猫路陆脢陆*/
+	DEBUG_DELAY();
+
 	/* column address control set */
-	ILI9341_Write_Cmd ( CMD_SetCoordinateX ); 
-	ILI9341_Write_Data ( 0x00 );
-	ILI9341_Write_Data ( 0x00 );
-	ILI9341_Write_Data ( 0x00 );
-	ILI9341_Write_Data ( 0xEF );
-	
+	ILI9341_Write_Cmd(CMD_SetCoordinateX);
+	ILI9341_Write_Data(0x00);
+	ILI9341_Write_Data(0x00);
+	ILI9341_Write_Data(0x00);
+	ILI9341_Write_Data(0xEF);
+
 	/* page address control set */
-	DEBUG_DELAY ();
-	ILI9341_Write_Cmd ( CMD_SetCoordinateY ); 
-	ILI9341_Write_Data ( 0x00 );
-	ILI9341_Write_Data ( 0x00 );
-	ILI9341_Write_Data ( 0x01 );
-	ILI9341_Write_Data ( 0x3F );
-	
+	DEBUG_DELAY();
+	ILI9341_Write_Cmd(CMD_SetCoordinateY);
+	ILI9341_Write_Data(0x00);
+	ILI9341_Write_Data(0x00);
+	ILI9341_Write_Data(0x01);
+	ILI9341_Write_Data(0x3F);
+
 	/*  Pixel Format Set (3Ah)  */
-	DEBUG_DELAY ();
-	ILI9341_Write_Cmd ( 0x3a ); 
-	ILI9341_Write_Data ( 0x55 );
-	
+	DEBUG_DELAY();
+	ILI9341_Write_Cmd(0x3a);
+	ILI9341_Write_Data(0x55);
+
 	/* Sleep Out (11h)  */
-	ILI9341_Write_Cmd ( 0x11 );	
-	ILI9341_Delay ( 0xAFFf<<2 );
-	DEBUG_DELAY ();
-	
+	ILI9341_Write_Cmd(0x11);
+	ILI9341_Delay(0xAFFf << 2);
+	DEBUG_DELAY();
+
 	/* Display ON (29h) */
-	ILI9341_Write_Cmd ( 0x29 ); 
-	
-	
+	ILI9341_Write_Cmd(0x29);
 }
 
-
 /**
- * @brief  ILI9341初始化函数，如果要用到lcd，一定要调用这个函数
- * @param  无
- * @retval 无
+ * @brief  ILI9341鲁玫脢录禄炉潞炉脢媒拢卢脠莽鹿没脪陋脫脙碌陆lcd拢卢脪禄露篓脪陋碌梅脫脙脮芒赂枚潞炉脢媒
+ * @param  脦脼
+ * @retval 脦脼
  */
-void ILI9341_Init ( void )
+void ILI9341_Init(void)
 {
-	ILI9341_GPIO_Config ();
-	ILI9341_FSMC_Config ();
-	
-	ILI9341_BackLed_Control ( ENABLE );      //点亮LCD背光灯
-	ILI9341_Rst ();
-	ILI9341_REG_Config ();
-	
-	//设置默认扫描方向，其中 6 模式为大部分液晶例程的默认显示方向  
+	ILI9341_GPIO_Config();
+	ILI9341_FSMC_Config();
+
+	ILI9341_BackLed_Control(ENABLE); //碌茫脕脕LCD卤鲁鹿芒碌脝
+	ILI9341_Rst();
+	ILI9341_REG_Config();
+
+	//脡猫脰脙脛卢脠脧脡篓脙猫路陆脧貌拢卢脝盲脰脨 6 脛拢脢陆脦陋麓贸虏驴路脰脪潞戮搂脌媒鲁脤碌脛脛卢脠脧脧脭脢戮路陆脧貌
 	ILI9341_GramScan(LCD_SCAN_MODE);
 }
 
-
 /**
- * @brief  ILI9341背光LED控制
- * @param  enumState ：决定是否使能背光LED
-  *   该参数为以下值之一：
-  *     @arg ENABLE :使能背光LED
-  *     @arg DISABLE :禁用背光LED
- * @retval 无
+ * @brief  ILI9341卤鲁鹿芒LED驴脴脰脝
+ * @param  enumState 拢潞戮枚露篓脢脟路帽脢鹿脛脺卤鲁鹿芒LED
+  *   赂脙虏脦脢媒脦陋脪脭脧脗脰碌脰庐脪禄拢潞
+  *     @arg ENABLE :脢鹿脛脺卤鲁鹿芒LED
+  *     @arg DISABLE :陆没脫脙卤鲁鹿芒LED
+ * @retval 脦脼
  */
-void ILI9341_BackLed_Control ( FunctionalState enumState )
+void ILI9341_BackLed_Control(FunctionalState enumState)
 {
-	if ( enumState )
-		GPIO_ResetBits ( ILI9341_BK_PORT, ILI9341_BK_PIN );	
+	if (enumState)
+		GPIO_ResetBits(ILI9341_BK_PORT, ILI9341_BK_PIN);
 	else
-		GPIO_SetBits ( ILI9341_BK_PORT, ILI9341_BK_PIN );
-		
+		GPIO_SetBits(ILI9341_BK_PORT, ILI9341_BK_PIN);
 }
 
-
-
 /**
- * @brief  ILI9341 软件复位
- * @param  无
- * @retval 无
+ * @brief  ILI9341 脠铆录镁赂麓脦禄
+ * @param  脦脼
+ * @retval 脦脼
  */
-void ILI9341_Rst ( void )
-{			
-	GPIO_ResetBits ( ILI9341_RST_PORT, ILI9341_RST_PIN );	 //低电平复位
+void ILI9341_Rst(void)
+{
+	GPIO_ResetBits(ILI9341_RST_PORT, ILI9341_RST_PIN); //碌脥碌莽脝陆赂麓脦禄
 
-	ILI9341_Delay ( 0xAFF ); 					   
+	ILI9341_Delay(0xAFF);
 
-	GPIO_SetBits ( ILI9341_RST_PORT, ILI9341_RST_PIN );		 	 
+	GPIO_SetBits(ILI9341_RST_PORT, ILI9341_RST_PIN);
 
-	ILI9341_Delay ( 0xAFF ); 	
-	
+	ILI9341_Delay(0xAFF);
 }
 
-
-
-
 /**
- * @brief  设置ILI9341的GRAM的扫描方向 
- * @param  ucOption ：选择GRAM的扫描方向 
- *     @arg 0-7 :参数可选值为0-7这八个方向
+ * @brief  脡猫脰脙ILI9341碌脛GRAM碌脛脡篓脙猫路陆脧貌 
+ * @param  ucOption 拢潞脩隆脭帽GRAM碌脛脡篓脙猫路陆脧貌 
+ *     @arg 0-7 :虏脦脢媒驴脡脩隆脰碌脦陋0-7脮芒掳脣赂枚路陆脧貌
  *
- *	！！！其中0、3、5、6 模式适合从左至右显示文字，
- *				不推荐使用其它模式显示文字	其它模式显示文字会有镜像效果			
+ *	拢隆拢隆拢隆脝盲脰脨0隆垄3隆垄5隆垄6 脛拢脢陆脢脢潞脧麓脫脳贸脰脕脫脪脧脭脢戮脦脛脳脰拢卢
+ *				虏禄脥脝录枚脢鹿脫脙脝盲脣眉脛拢脢陆脧脭脢戮脦脛脳脰	脝盲脣眉脛拢脢陆脧脭脢戮脦脛脳脰禄谩脫脨戮碌脧帽脨搂鹿没			
  *		
- *	其中0、2、4、6 模式的X方向像素为240，Y方向像素为320
- *	其中1、3、5、7 模式下X方向像素为320，Y方向像素为240
+ *	脝盲脰脨0隆垄2隆垄4隆垄6 脛拢脢陆碌脛X路陆脧貌脧帽脣脴脦陋240拢卢Y路陆脧貌脧帽脣脴脦陋320
+ *	脝盲脰脨1隆垄3隆垄5隆垄7 脛拢脢陆脧脗X路陆脧貌脧帽脣脴脦陋320拢卢Y路陆脧貌脧帽脣脴脦陋240
  *
- *	其中 6 模式为大部分液晶例程的默认显示方向
- *	其中 3 模式为摄像头例程使用的方向
- *	其中 0 模式为BMP图片显示例程使用的方向
+ *	脝盲脰脨 6 脛拢脢陆脦陋麓贸虏驴路脰脪潞戮搂脌媒鲁脤碌脛脛卢脠脧脧脭脢戮路陆脧貌
+ *	脝盲脰脨 3 脛拢脢陆脦陋脡茫脧帽脥路脌媒鲁脤脢鹿脫脙碌脛路陆脧貌
+ *	脝盲脰脨 0 脛拢脢陆脦陋BMP脥录脝卢脧脭脢戮脌媒鲁脤脢鹿脫脙碌脛路陆脧貌
  *
- * @retval 无
- * @note  坐标图例：A表示向上，V表示向下，<表示向左，>表示向右
-					X表示X轴，Y表示Y轴
+ * @retval 脦脼
+ * @note  脳酶卤锚脥录脌媒拢潞A卤铆脢戮脧貌脡脧拢卢V卤铆脢戮脧貌脧脗拢卢<卤铆脢戮脧貌脳贸拢卢>卤铆脢戮脧貌脫脪
+					X卤铆脢戮X脰谩拢卢Y卤铆脢戮Y脰谩
 
 ------------------------------------------------------------
-模式0：				.		模式1：		.	模式2：			.	模式3：					
+脛拢脢陆0拢潞				.		脛拢脢陆1拢潞		.	脛拢脢陆2拢潞			.	脛拢脢陆3拢潞					
 					A		.					A		.		A					.		A									
 					|		.					|		.		|					.		|							
 					Y		.					X		.		Y					.		X					
 					0		.					1		.		2					.		3					
 	<--- X0 o		.	<----Y1	o		.		o 2X--->  .		o 3Y--->	
 ------------------------------------------------------------	
-模式4：				.	模式5：			.	模式6：			.	模式7：					
+脛拢脢陆4拢潞				.	脛拢脢陆5拢潞			.	脛拢脢陆6拢潞			.	脛拢脢陆7拢潞					
 	<--- X4 o		.	<--- Y5 o		.		o 6X--->  .		o 7Y--->	
 					4		.					5		.		6					.		7	
 					Y		.					X		.		Y					.		X						
 					|		.					|		.		|					.		|							
 					V		.					V		.		V					.		V		
 ---------------------------------------------------------				
-											 LCD屏示例
+											 LCD脝脕脢戮脌媒
 								|-----------------|
-								|			秉火Logo		|
+								|			卤眉禄冒Logo		|
 								|									|
 								|									|
 								|									|
@@ -526,611 +504,815 @@ void ILI9341_Rst ( void )
 								|									|
 								|									|
 								|-----------------|
-								屏幕正面（宽240，高320）
+								脝脕脛禄脮媒脙忙拢篓驴铆240拢卢赂脽320拢漏
 
  *******************************************************/
-void ILI9341_GramScan ( uint8_t ucOption )
-{	
-	//参数检查，只可输入0-7
-	if(ucOption >7 )
+void ILI9341_GramScan(uint8_t ucOption)
+{
+	//虏脦脢媒录矛虏茅拢卢脰禄驴脡脢盲脠毛0-7
+	if (ucOption > 7)
 		return;
-	
-	//根据模式更新LCD_SCAN_MODE的值，主要用于触摸屏选择计算参数
+
+	//赂霉戮脻脛拢脢陆赂眉脨脗LCD_SCAN_MODE碌脛脰碌拢卢脰梅脪陋脫脙脫脷麓楼脙镁脝脕脩隆脭帽录脝脣茫虏脦脢媒
 	LCD_SCAN_MODE = ucOption;
-	
-	//根据模式更新XY方向的像素宽度
-	if(ucOption%2 == 0)	
+
+	//赂霉戮脻脛拢脢陆赂眉脨脗XY路陆脧貌碌脛脧帽脣脴驴铆露脠
+	if (ucOption % 2 == 0)
 	{
-		//0 2 4 6模式下X方向像素宽度为240，Y方向为320
+		//0 2 4 6脛拢脢陆脧脗X路陆脧貌脧帽脣脴驴铆露脠脦陋240拢卢Y路陆脧貌脦陋320
 		LCD_X_LENGTH = ILI9341_LESS_PIXEL;
-		LCD_Y_LENGTH =	ILI9341_MORE_PIXEL;
-	}
-	else				
-	{
-		//1 3 5 7模式下X方向像素宽度为320，Y方向为240
-		LCD_X_LENGTH = ILI9341_MORE_PIXEL;
-		LCD_Y_LENGTH =	ILI9341_LESS_PIXEL; 
-	}
-
-	//0x36命令参数的高3位可用于设置GRAM扫描方向	
-	ILI9341_Write_Cmd ( 0x36 ); 
-	ILI9341_Write_Data ( 0x08 |(ucOption<<5));//根据ucOption的值设置LCD参数，共0-7种模式
-	ILI9341_Write_Cmd ( CMD_SetCoordinateX ); 
-	ILI9341_Write_Data ( 0x00 );		/* x 起始坐标高8位 */
-	ILI9341_Write_Data ( 0x00 );		/* x 起始坐标低8位 */
-	ILI9341_Write_Data ( ((LCD_X_LENGTH-1)>>8)&0xFF ); /* x 结束坐标高8位 */	
-	ILI9341_Write_Data ( (LCD_X_LENGTH-1)&0xFF );				/* x 结束坐标低8位 */
-
-	ILI9341_Write_Cmd ( CMD_SetCoordinateY ); 
-	ILI9341_Write_Data ( 0x00 );		/* y 起始坐标高8位 */
-	ILI9341_Write_Data ( 0x00 );		/* y 起始坐标低8位 */
-	ILI9341_Write_Data ( ((LCD_Y_LENGTH-1)>>8)&0xFF );	/* y 结束坐标高8位 */	 
-	ILI9341_Write_Data ( (LCD_Y_LENGTH-1)&0xFF );				/* y 结束坐标低8位 */
-
-	/* write gram start */
-	ILI9341_Write_Cmd ( CMD_SetPixel );	
-}
-
-
-
-/**
- * @brief  在ILI9341显示器上开辟一个窗口
- * @param  usX ：在特定扫描方向下窗口的起点X坐标
- * @param  usY ：在特定扫描方向下窗口的起点Y坐标
- * @param  usWidth ：窗口的宽度
- * @param  usHeight ：窗口的高度
- * @retval 无
- */
-void ILI9341_OpenWindow ( uint16_t usX, uint16_t usY, uint16_t usWidth, uint16_t usHeight )
-{	
-	ILI9341_Write_Cmd ( CMD_SetCoordinateX ); 				 /* 设置X坐标 */
-	ILI9341_Write_Data ( usX >> 8  );	 /* 先高8位，然后低8位 */
-	ILI9341_Write_Data ( usX & 0xff  );	 /* 设置起始点和结束点*/
-	ILI9341_Write_Data ( ( usX + usWidth - 1 ) >> 8  );
-	ILI9341_Write_Data ( ( usX + usWidth - 1 ) & 0xff  );
-
-	ILI9341_Write_Cmd ( CMD_SetCoordinateY ); 			     /* 设置Y坐标*/
-	ILI9341_Write_Data ( usY >> 8  );
-	ILI9341_Write_Data ( usY & 0xff  );
-	ILI9341_Write_Data ( ( usY + usHeight - 1 ) >> 8 );
-	ILI9341_Write_Data ( ( usY + usHeight - 1) & 0xff );
-	
-}
-
-
-/**
- * @brief  设定ILI9341的光标坐标
- * @param  usX ：在特定扫描方向下光标的X坐标
- * @param  usY ：在特定扫描方向下光标的Y坐标
- * @retval 无
- */
-static void ILI9341_SetCursor ( uint16_t usX, uint16_t usY )	
-{
-	ILI9341_OpenWindow ( usX, usY, 1, 1 );
-}
-
-
-/**
- * @brief  在ILI9341显示器上以某一颜色填充像素点
- * @param  ulAmout_Point ：要填充颜色的像素点的总数目
- * @param  usColor ：颜色
- * @retval 无
- */
-static __inline void ILI9341_FillColor ( uint32_t ulAmout_Point, uint16_t usColor )
-{
-	uint32_t i = 0;
-	
-	
-	/* memory write */
-	ILI9341_Write_Cmd ( CMD_SetPixel );	
-		
-	for ( i = 0; i < ulAmout_Point; i ++ )
-		ILI9341_Write_Data ( usColor );
-		
-	
-}
-
-
-/**
- * @brief  对ILI9341显示器的某一窗口以某种颜色进行清屏
- * @param  usX ：在特定扫描方向下窗口的起点X坐标
- * @param  usY ：在特定扫描方向下窗口的起点Y坐标
- * @param  usWidth ：窗口的宽度
- * @param  usHeight ：窗口的高度
- * @note 可使用LCD_SetBackColor、LCD_SetTextColor、LCD_SetColors函数设置颜色
- * @retval 无
- */
-void ILI9341_Clear ( uint16_t usX, uint16_t usY, uint16_t usWidth, uint16_t usHeight )
-{
-	ILI9341_OpenWindow ( usX, usY, usWidth, usHeight );
-
-	ILI9341_FillColor ( usWidth * usHeight, CurrentBackColor );		
-	
-}
-
-
-/**
- * @brief  对ILI9341显示器的某一点以某种颜色进行填充
- * @param  usX ：在特定扫描方向下该点的X坐标
- * @param  usY ：在特定扫描方向下该点的Y坐标
- * @note 可使用LCD_SetBackColor、LCD_SetTextColor、LCD_SetColors函数设置颜色
- * @retval 无
- */
-void ILI9341_SetPointPixel ( uint16_t usX, uint16_t usY )	
-{	
-	if ( ( usX < LCD_X_LENGTH ) && ( usY < LCD_Y_LENGTH ) )
-  {
-		ILI9341_SetCursor ( usX, usY );
-		
-		ILI9341_FillColor ( 1, CurrentTextColor );
-	}
-	
-}
-
-
-/**
- * @brief  读取ILI9341 GRAN 的一个像素数据
- * @param  无
- * @retval 像素数据
- */
-static uint16_t ILI9341_Read_PixelData ( void )	
-{	
-	uint16_t usR=0, usG=0, usB=0 ;
-
-	
-	ILI9341_Write_Cmd ( 0x2E );   /* 读数据 */
-	
-	usR = ILI9341_Read_Data (); 	/*FIRST READ OUT DUMMY DATA*/
-	
-	usR = ILI9341_Read_Data ();  	/*READ OUT RED DATA  */
-	usB = ILI9341_Read_Data ();  	/*READ OUT BLUE DATA*/
-	usG = ILI9341_Read_Data ();  	/*READ OUT GREEN DATA*/	
-	
-  return ( ( ( usR >> 11 ) << 11 ) | ( ( usG >> 10 ) << 5 ) | ( usB >> 11 ) );
-	
-}
-
-
-/**
- * @brief  获取 ILI9341 显示器上某一个坐标点的像素数据
- * @param  usX ：在特定扫描方向下该点的X坐标
- * @param  usY ：在特定扫描方向下该点的Y坐标
- * @retval 像素数据
- */
-uint16_t ILI9341_GetPointPixel ( uint16_t usX, uint16_t usY )
-{ 
-	uint16_t usPixelData;
-
-	
-	ILI9341_SetCursor ( usX, usY );
-	
-	usPixelData = ILI9341_Read_PixelData ();
-	
-	return usPixelData;
-	
-}
-
-
-/**
- * @brief  在 ILI9341 显示器上使用 Bresenham 算法画线段 
- * @param  usX1 ：在特定扫描方向下线段的一个端点X坐标
- * @param  usY1 ：在特定扫描方向下线段的一个端点Y坐标
- * @param  usX2 ：在特定扫描方向下线段的另一个端点X坐标
- * @param  usY2 ：在特定扫描方向下线段的另一个端点Y坐标
- * @note 可使用LCD_SetBackColor、LCD_SetTextColor、LCD_SetColors函数设置颜色
- * @retval 无
- */
-void ILI9341_DrawLine ( uint16_t usX1, uint16_t usY1, uint16_t usX2, uint16_t usY2 )
-{
-	uint16_t us; 
-	uint16_t usX_Current, usY_Current;
-	
-	int32_t lError_X = 0, lError_Y = 0, lDelta_X, lDelta_Y, lDistance; 
-	int32_t lIncrease_X, lIncrease_Y; 	
-	
-	
-	lDelta_X = usX2 - usX1; //计算坐标增量 
-	lDelta_Y = usY2 - usY1; 
-	
-	usX_Current = usX1; 
-	usY_Current = usY1; 
-	
-	
-	if ( lDelta_X > 0 ) 
-		lIncrease_X = 1; //设置单步方向 
-	
-	else if ( lDelta_X == 0 ) 
-		lIncrease_X = 0;//垂直线 
-	
-	else 
-  { 
-    lIncrease_X = -1;
-    lDelta_X = - lDelta_X;
-  } 
-
-	
-	if ( lDelta_Y > 0 )
-		lIncrease_Y = 1; 
-	
-	else if ( lDelta_Y == 0 )
-		lIncrease_Y = 0;//水平线 
-	
-	else 
-  {
-    lIncrease_Y = -1;
-    lDelta_Y = - lDelta_Y;
-  } 
-
-	
-	if (  lDelta_X > lDelta_Y )
-		lDistance = lDelta_X; //选取基本增量坐标轴 
-	
-	else 
-		lDistance = lDelta_Y; 
-
-	
-	for ( us = 0; us <= lDistance + 1; us ++ )//画线输出 
-	{  
-		ILI9341_SetPointPixel ( usX_Current, usY_Current );//画点 
-		
-		lError_X += lDelta_X ; 
-		lError_Y += lDelta_Y ; 
-		
-		if ( lError_X > lDistance ) 
-		{ 
-			lError_X -= lDistance; 
-			usX_Current += lIncrease_X; 
-		}  
-		
-		if ( lError_Y > lDistance ) 
-		{ 
-			lError_Y -= lDistance; 
-			usY_Current += lIncrease_Y; 
-		} 
-		
-	}  
-	
-	
-}   
-
-
-/**
- * @brief  在 ILI9341 显示器上画一个矩形
- * @param  usX_Start ：在特定扫描方向下矩形的起始点X坐标
- * @param  usY_Start ：在特定扫描方向下矩形的起始点Y坐标
- * @param  usWidth：矩形的宽度（单位：像素）
- * @param  usHeight：矩形的高度（单位：像素）
- * @param  ucFilled ：选择是否填充该矩形
-  *   该参数为以下值之一：
-  *     @arg 0 :空心矩形
-  *     @arg 1 :实心矩形 
- * @note 可使用LCD_SetBackColor、LCD_SetTextColor、LCD_SetColors函数设置颜色
- * @retval 无
- */
-void ILI9341_DrawRectangle ( uint16_t usX_Start, uint16_t usY_Start, uint16_t usWidth, uint16_t usHeight, uint8_t ucFilled )
-{
-	if ( ucFilled )
-	{
-		ILI9341_OpenWindow ( usX_Start, usY_Start, usWidth, usHeight );
-		ILI9341_FillColor ( usWidth * usHeight ,CurrentTextColor);	
+		LCD_Y_LENGTH = ILI9341_MORE_PIXEL;
 	}
 	else
 	{
-		ILI9341_DrawLine ( usX_Start, usY_Start, usX_Start + usWidth - 1, usY_Start );
-		ILI9341_DrawLine ( usX_Start, usY_Start + usHeight - 1, usX_Start + usWidth - 1, usY_Start + usHeight - 1 );
-		ILI9341_DrawLine ( usX_Start, usY_Start, usX_Start, usY_Start + usHeight - 1 );
-		ILI9341_DrawLine ( usX_Start + usWidth - 1, usY_Start, usX_Start + usWidth - 1, usY_Start + usHeight - 1 );		
+		//1 3 5 7脛拢脢陆脧脗X路陆脧貌脧帽脣脴驴铆露脠脦陋320拢卢Y路陆脧貌脦陋240
+		LCD_X_LENGTH = ILI9341_MORE_PIXEL;
+		LCD_Y_LENGTH = ILI9341_LESS_PIXEL;
 	}
 
+	//0x36脙眉脕卯虏脦脢媒碌脛赂脽3脦禄驴脡脫脙脫脷脡猫脰脙GRAM脡篓脙猫路陆脧貌
+	ILI9341_Write_Cmd(0x36);
+	ILI9341_Write_Data(0x08 | (ucOption << 5)); //赂霉戮脻ucOption碌脛脰碌脡猫脰脙LCD虏脦脢媒拢卢鹿虏0-7脰脰脛拢脢陆
+	ILI9341_Write_Cmd(CMD_SetCoordinateX);
+	ILI9341_Write_Data(0x00);							  /* x 脝冒脢录脳酶卤锚赂脽8脦禄 */
+	ILI9341_Write_Data(0x00);							  /* x 脝冒脢录脳酶卤锚碌脥8脦禄 */
+	ILI9341_Write_Data(((LCD_X_LENGTH - 1) >> 8) & 0xFF); /* x 陆谩脢酶脳酶卤锚赂脽8脦禄 */
+	ILI9341_Write_Data((LCD_X_LENGTH - 1) & 0xFF);		  /* x 陆谩脢酶脳酶卤锚碌脥8脦禄 */
+
+	ILI9341_Write_Cmd(CMD_SetCoordinateY);
+	ILI9341_Write_Data(0x00);							  /* y 脝冒脢录脳酶卤锚赂脽8脦禄 */
+	ILI9341_Write_Data(0x00);							  /* y 脝冒脢录脳酶卤锚碌脥8脦禄 */
+	ILI9341_Write_Data(((LCD_Y_LENGTH - 1) >> 8) & 0xFF); /* y 陆谩脢酶脳酶卤锚赂脽8脦禄 */
+	ILI9341_Write_Data((LCD_Y_LENGTH - 1) & 0xFF);		  /* y 陆谩脢酶脳酶卤锚碌脥8脦禄 */
+
+	/* write gram start */
+	ILI9341_Write_Cmd(CMD_SetPixel);
 }
 
+/**
+ * @brief  脭脷ILI9341脧脭脢戮脝梅脡脧驴陋卤脵脪禄赂枚麓掳驴脷
+ * @param  usX 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗麓掳驴脷碌脛脝冒碌茫X脳酶卤锚
+ * @param  usY 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗麓掳驴脷碌脛脝冒碌茫Y脳酶卤锚
+ * @param  usWidth 拢潞麓掳驴脷碌脛驴铆露脠
+ * @param  usHeight 拢潞麓掳驴脷碌脛赂脽露脠
+ * @retval 脦脼
+ */
+void ILI9341_OpenWindow(uint16_t usX, uint16_t usY, uint16_t usWidth, uint16_t usHeight)
+{
+	ILI9341_Write_Cmd(CMD_SetCoordinateX); /* 脡猫脰脙X脳酶卤锚 */
+	ILI9341_Write_Data(usX >> 8);		   /* 脧脠赂脽8脦禄拢卢脠禄潞贸碌脥8脦禄 */
+	ILI9341_Write_Data(usX & 0xff);		   /* 脡猫脰脙脝冒脢录碌茫潞脥陆谩脢酶碌茫*/
+	ILI9341_Write_Data((usX + usWidth - 1) >> 8);
+	ILI9341_Write_Data((usX + usWidth - 1) & 0xff);
+
+	ILI9341_Write_Cmd(CMD_SetCoordinateY); /* 脡猫脰脙Y脳酶卤锚*/
+	ILI9341_Write_Data(usY >> 8);
+	ILI9341_Write_Data(usY & 0xff);
+	ILI9341_Write_Data((usY + usHeight - 1) >> 8);
+	ILI9341_Write_Data((usY + usHeight - 1) & 0xff);
+}
 
 /**
- * @brief  在 ILI9341 显示器上使用 Bresenham 算法画圆
- * @param  usX_Center ：在特定扫描方向下圆心的X坐标
- * @param  usY_Center ：在特定扫描方向下圆心的Y坐标
- * @param  usRadius：圆的半径（单位：像素）
- * @param  ucFilled ：选择是否填充该圆
-  *   该参数为以下值之一：
-  *     @arg 0 :空心圆
-  *     @arg 1 :实心圆
- * @note 可使用LCD_SetBackColor、LCD_SetTextColor、LCD_SetColors函数设置颜色
- * @retval 无
+ * @brief  脡猫露篓ILI9341碌脛鹿芒卤锚脳酶卤锚
+ * @param  usX 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗鹿芒卤锚碌脛X脳酶卤锚
+ * @param  usY 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗鹿芒卤锚碌脛Y脳酶卤锚
+ * @retval 脦脼
  */
-void ILI9341_DrawCircle ( uint16_t usX_Center, uint16_t usY_Center, uint16_t usRadius, uint8_t ucFilled )
+static void ILI9341_SetCursor(uint16_t usX, uint16_t usY)
+{
+	ILI9341_OpenWindow(usX, usY, 1, 1);
+}
+
+/**
+ * @brief  脭脷ILI9341脧脭脢戮脝梅脡脧脪脭脛鲁脪禄脩脮脡芦脤卯鲁盲脧帽脣脴碌茫
+ * @param  ulAmout_Point 拢潞脪陋脤卯鲁盲脩脮脡芦碌脛脧帽脣脴碌茫碌脛脳脺脢媒脛驴
+ * @param  usColor 拢潞脩脮脡芦
+ * @retval 脦脼
+ */
+static __inline void ILI9341_FillColor(uint32_t ulAmout_Point, uint16_t usColor)
+{
+	uint32_t i = 0;
+
+	/* memory write */
+	ILI9341_Write_Cmd(CMD_SetPixel);
+
+	for (i = 0; i < ulAmout_Point; i++)
+		ILI9341_Write_Data(usColor);
+}
+
+/**
+ * @brief  露脭ILI9341脧脭脢戮脝梅碌脛脛鲁脪禄麓掳驴脷脪脭脛鲁脰脰脩脮脡芦陆酶脨脨脟氓脝脕
+ * @param  usX 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗麓掳驴脷碌脛脝冒碌茫X脳酶卤锚
+ * @param  usY 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗麓掳驴脷碌脛脝冒碌茫Y脳酶卤锚
+ * @param  usWidth 拢潞麓掳驴脷碌脛驴铆露脠
+ * @param  usHeight 拢潞麓掳驴脷碌脛赂脽露脠
+ * @note 驴脡脢鹿脫脙LCD_SetBackColor隆垄LCD_SetTextColor隆垄LCD_SetColors潞炉脢媒脡猫脰脙脩脮脡芦
+ * @retval 脦脼
+ */
+void ILI9341_Clear(uint16_t usX, uint16_t usY, uint16_t usWidth, uint16_t usHeight)
+{
+	ILI9341_OpenWindow(usX, usY, usWidth, usHeight);
+
+	ILI9341_FillColor(usWidth * usHeight, CurrentBackColor);
+}
+
+/**
+ * @brief  露脭ILI9341脧脭脢戮脝梅碌脛脛鲁脪禄碌茫脪脭脛鲁脰脰脩脮脡芦陆酶脨脨脤卯鲁盲
+ * @param  usX 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗赂脙碌茫碌脛X脳酶卤锚
+ * @param  usY 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗赂脙碌茫碌脛Y脳酶卤锚
+ * @note 驴脡脢鹿脫脙LCD_SetBackColor隆垄LCD_SetTextColor隆垄LCD_SetColors潞炉脢媒脡猫脰脙脩脮脡芦
+ * @retval 脦脼
+ */
+void ILI9341_SetPointPixel(uint16_t usX, uint16_t usY)
+{
+	if ((usX < LCD_X_LENGTH) && (usY < LCD_Y_LENGTH))
+	{
+		ILI9341_SetCursor(usX, usY);
+
+		ILI9341_FillColor(1, CurrentTextColor);
+	}
+}
+
+/**
+ * @brief  露脕脠隆ILI9341 GRAN 碌脛脪禄赂枚脧帽脣脴脢媒戮脻
+ * @param  脦脼
+ * @retval 脧帽脣脴脢媒戮脻
+ */
+static uint16_t ILI9341_Read_PixelData(void)
+{
+	uint16_t usR = 0, usG = 0, usB = 0;
+
+	ILI9341_Write_Cmd(0x2E); /* 露脕脢媒戮脻 */
+
+	usR = ILI9341_Read_Data(); /*FIRST READ OUT DUMMY DATA*/
+
+	usR = ILI9341_Read_Data(); /*READ OUT RED DATA  */
+	usB = ILI9341_Read_Data(); /*READ OUT BLUE DATA*/
+	usG = ILI9341_Read_Data(); /*READ OUT GREEN DATA*/
+
+	return (((usR >> 11) << 11) | ((usG >> 10) << 5) | (usB >> 11));
+}
+
+/**
+ * @brief  禄帽脠隆 ILI9341 脧脭脢戮脝梅脡脧脛鲁脪禄赂枚脳酶卤锚碌茫碌脛脧帽脣脴脢媒戮脻
+ * @param  usX 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗赂脙碌茫碌脛X脳酶卤锚
+ * @param  usY 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗赂脙碌茫碌脛Y脳酶卤锚
+ * @retval 脧帽脣脴脢媒戮脻
+ */
+uint16_t ILI9341_GetPointPixel(uint16_t usX, uint16_t usY)
+{
+	uint16_t usPixelData;
+
+	ILI9341_SetCursor(usX, usY);
+
+	usPixelData = ILI9341_Read_PixelData();
+
+	return usPixelData;
+}
+
+/**
+ * @brief  脭脷 ILI9341 脧脭脢戮脝梅脡脧脢鹿脫脙 Bresenham 脣茫路篓禄颅脧脽露脦 
+ * @param  usX1 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脧脽露脦碌脛脪禄赂枚露脣碌茫X脳酶卤锚
+ * @param  usY1 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脧脽露脦碌脛脪禄赂枚露脣碌茫Y脳酶卤锚
+ * @param  usX2 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脧脽露脦碌脛脕铆脪禄赂枚露脣碌茫X脳酶卤锚
+ * @param  usY2 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脧脽露脦碌脛脕铆脪禄赂枚露脣碌茫Y脳酶卤锚
+ * @note 驴脡脢鹿脫脙LCD_SetBackColor隆垄LCD_SetTextColor隆垄LCD_SetColors潞炉脢媒脡猫脰脙脩脮脡芦
+ * @retval 脦脼
+ */
+void ILI9341_DrawLine(uint16_t usX1, uint16_t usY1, uint16_t usX2, uint16_t usY2)
+{
+	uint16_t us;
+	uint16_t usX_Current, usY_Current;
+
+	int32_t lError_X = 0, lError_Y = 0, lDelta_X, lDelta_Y, lDistance;
+	int32_t lIncrease_X, lIncrease_Y;
+
+	lDelta_X = usX2 - usX1; //录脝脣茫脳酶卤锚脭枚脕驴
+	lDelta_Y = usY2 - usY1;
+
+	usX_Current = usX1;
+	usY_Current = usY1;
+
+	if (lDelta_X > 0)
+		lIncrease_X = 1; //脡猫脰脙碌楼虏陆路陆脧貌
+
+	else if (lDelta_X == 0)
+		lIncrease_X = 0; //麓鹿脰卤脧脽
+
+	else
+	{
+		lIncrease_X = -1;
+		lDelta_X = -lDelta_X;
+	}
+
+	if (lDelta_Y > 0)
+		lIncrease_Y = 1;
+
+	else if (lDelta_Y == 0)
+		lIncrease_Y = 0; //脣庐脝陆脧脽
+
+	else
+	{
+		lIncrease_Y = -1;
+		lDelta_Y = -lDelta_Y;
+	}
+
+	if (lDelta_X > lDelta_Y)
+		lDistance = lDelta_X; //脩隆脠隆禄霉卤戮脭枚脕驴脳酶卤锚脰谩
+
+	else
+		lDistance = lDelta_Y;
+
+	for (us = 0; us <= lDistance + 1; us++) //禄颅脧脽脢盲鲁枚
+	{
+		ILI9341_SetPointPixel(usX_Current, usY_Current); //禄颅碌茫
+
+		lError_X += lDelta_X;
+		lError_Y += lDelta_Y;
+
+		if (lError_X > lDistance)
+		{
+			lError_X -= lDistance;
+			usX_Current += lIncrease_X;
+		}
+
+		if (lError_Y > lDistance)
+		{
+			lError_Y -= lDistance;
+			usY_Current += lIncrease_Y;
+		}
+	}
+}
+
+/**
+ * @brief  脭脷 ILI9341 脧脭脢戮脝梅脡脧禄颅脪禄赂枚戮脴脨脦
+ * @param  usX_Start 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗戮脴脨脦碌脛脝冒脢录碌茫X脳酶卤锚
+ * @param  usY_Start 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗戮脴脨脦碌脛脝冒脢录碌茫Y脳酶卤锚
+ * @param  usWidth拢潞戮脴脨脦碌脛驴铆露脠拢篓碌楼脦禄拢潞脧帽脣脴拢漏
+ * @param  usHeight拢潞戮脴脨脦碌脛赂脽露脠拢篓碌楼脦禄拢潞脧帽脣脴拢漏
+ * @param  ucFilled 拢潞脩隆脭帽脢脟路帽脤卯鲁盲赂脙戮脴脨脦
+  *   赂脙虏脦脢媒脦陋脪脭脧脗脰碌脰庐脪禄拢潞
+  *     @arg 0 :驴脮脨脛戮脴脨脦
+  *     @arg 1 :脢碌脨脛戮脴脨脦 
+ * @note 驴脡脢鹿脫脙LCD_SetBackColor隆垄LCD_SetTextColor隆垄LCD_SetColors潞炉脢媒脡猫脰脙脩脮脡芦
+ * @retval 脦脼
+ */
+void ILI9341_DrawRectangle(uint16_t usX_Start, uint16_t usY_Start, uint16_t usWidth, uint16_t usHeight, uint8_t ucFilled)
+{
+	if (ucFilled)
+	{
+		ILI9341_OpenWindow(usX_Start, usY_Start, usWidth, usHeight);
+		ILI9341_FillColor(usWidth * usHeight, CurrentTextColor);
+	}
+	else
+	{
+		ILI9341_DrawLine(usX_Start, usY_Start, usX_Start + usWidth - 1, usY_Start);
+		ILI9341_DrawLine(usX_Start, usY_Start + usHeight - 1, usX_Start + usWidth - 1, usY_Start + usHeight - 1);
+		ILI9341_DrawLine(usX_Start, usY_Start, usX_Start, usY_Start + usHeight - 1);
+		ILI9341_DrawLine(usX_Start + usWidth - 1, usY_Start, usX_Start + usWidth - 1, usY_Start + usHeight - 1);
+	}
+}
+
+/**
+ * @brief  脭脷 ILI9341 脧脭脢戮脝梅脡脧脢鹿脫脙 Bresenham 脣茫路篓禄颅脭虏
+ * @param  usX_Center 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脭虏脨脛碌脛X脳酶卤锚
+ * @param  usY_Center 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脭虏脨脛碌脛Y脳酶卤锚
+ * @param  usRadius拢潞脭虏碌脛掳毛戮露拢篓碌楼脦禄拢潞脧帽脣脴拢漏
+ * @param  ucFilled 拢潞脩隆脭帽脢脟路帽脤卯鲁盲赂脙脭虏
+  *   赂脙虏脦脢媒脦陋脪脭脧脗脰碌脰庐脪禄拢潞
+  *     @arg 0 :驴脮脨脛脭虏
+  *     @arg 1 :脢碌脨脛脭虏
+ * @note 驴脡脢鹿脫脙LCD_SetBackColor隆垄LCD_SetTextColor隆垄LCD_SetColors潞炉脢媒脡猫脰脙脩脮脡芦
+ * @retval 脦脼
+ */
+void ILI9341_DrawCircle(uint16_t usX_Center, uint16_t usY_Center, uint16_t usRadius, uint8_t ucFilled)
 {
 	int16_t sCurrentX, sCurrentY;
 	int16_t sError;
-	
-	
-	sCurrentX = 0; sCurrentY = usRadius;	  
-	
-	sError = 3 - ( usRadius << 1 );     //判断下个点位置的标志
-	
-	
-	while ( sCurrentX <= sCurrentY )
+
+	sCurrentX = 0;
+	sCurrentY = usRadius;
+
+	sError = 3 - (usRadius << 1); //脜脨露脧脧脗赂枚碌茫脦禄脰脙碌脛卤锚脰戮
+
+	while (sCurrentX <= sCurrentY)
 	{
 		int16_t sCountY;
-		
-		
-		if ( ucFilled ) 			
-			for ( sCountY = sCurrentX; sCountY <= sCurrentY; sCountY ++ ) 
-			{                      
-				ILI9341_SetPointPixel ( usX_Center + sCurrentX, usY_Center + sCountY );           //1，研究对象 
-				ILI9341_SetPointPixel ( usX_Center - sCurrentX, usY_Center + sCountY );           //2       
-				ILI9341_SetPointPixel ( usX_Center - sCountY,   usY_Center + sCurrentX );           //3
-				ILI9341_SetPointPixel ( usX_Center - sCountY,   usY_Center - sCurrentX );           //4
-				ILI9341_SetPointPixel ( usX_Center - sCurrentX, usY_Center - sCountY );           //5    
-        ILI9341_SetPointPixel ( usX_Center + sCurrentX, usY_Center - sCountY );           //6
-				ILI9341_SetPointPixel ( usX_Center + sCountY,   usY_Center - sCurrentX );           //7 	
-        ILI9341_SetPointPixel ( usX_Center + sCountY,   usY_Center + sCurrentX );           //0				
-			}
-		
-		else
-		{          
-			ILI9341_SetPointPixel ( usX_Center + sCurrentX, usY_Center + sCurrentY );             //1，研究对象
-			ILI9341_SetPointPixel ( usX_Center - sCurrentX, usY_Center + sCurrentY );             //2      
-			ILI9341_SetPointPixel ( usX_Center - sCurrentY, usY_Center + sCurrentX );             //3
-			ILI9341_SetPointPixel ( usX_Center - sCurrentY, usY_Center - sCurrentX );             //4
-			ILI9341_SetPointPixel ( usX_Center - sCurrentX, usY_Center - sCurrentY );             //5       
-			ILI9341_SetPointPixel ( usX_Center + sCurrentX, usY_Center - sCurrentY );             //6
-			ILI9341_SetPointPixel ( usX_Center + sCurrentY, usY_Center - sCurrentX );             //7 
-			ILI9341_SetPointPixel ( usX_Center + sCurrentY, usY_Center + sCurrentX );             //0
-    }			
-		
-		
-		sCurrentX ++;
 
-		
-		if ( sError < 0 ) 
-			sError += 4 * sCurrentX + 6;	  
-		
+		if (ucFilled)
+			for (sCountY = sCurrentX; sCountY <= sCurrentY; sCountY++)
+			{
+				ILI9341_SetPointPixel(usX_Center + sCurrentX, usY_Center + sCountY); //1拢卢脩脨戮驴露脭脧贸
+				ILI9341_SetPointPixel(usX_Center - sCurrentX, usY_Center + sCountY); //2
+				ILI9341_SetPointPixel(usX_Center - sCountY, usY_Center + sCurrentX); //3
+				ILI9341_SetPointPixel(usX_Center - sCountY, usY_Center - sCurrentX); //4
+				ILI9341_SetPointPixel(usX_Center - sCurrentX, usY_Center - sCountY); //5
+				ILI9341_SetPointPixel(usX_Center + sCurrentX, usY_Center - sCountY); //6
+				ILI9341_SetPointPixel(usX_Center + sCountY, usY_Center - sCurrentX); //7
+				ILI9341_SetPointPixel(usX_Center + sCountY, usY_Center + sCurrentX); //0
+			}
+
 		else
 		{
-			sError += 10 + 4 * ( sCurrentX - sCurrentY );   
-			sCurrentY --;
-		} 	
-		
-		
+			ILI9341_SetPointPixel(usX_Center + sCurrentX, usY_Center + sCurrentY); //1拢卢脩脨戮驴露脭脧贸
+			ILI9341_SetPointPixel(usX_Center - sCurrentX, usY_Center + sCurrentY); //2
+			ILI9341_SetPointPixel(usX_Center - sCurrentY, usY_Center + sCurrentX); //3
+			ILI9341_SetPointPixel(usX_Center - sCurrentY, usY_Center - sCurrentX); //4
+			ILI9341_SetPointPixel(usX_Center - sCurrentX, usY_Center - sCurrentY); //5
+			ILI9341_SetPointPixel(usX_Center + sCurrentX, usY_Center - sCurrentY); //6
+			ILI9341_SetPointPixel(usX_Center + sCurrentY, usY_Center - sCurrentX); //7
+			ILI9341_SetPointPixel(usX_Center + sCurrentY, usY_Center + sCurrentX); //0
+		}
+
+		sCurrentX++;
+
+		if (sError < 0)
+			sError += 4 * sCurrentX + 6;
+
+		else
+		{
+			sError += 10 + 4 * (sCurrentX - sCurrentY);
+			sCurrentY--;
+		}
 	}
-	
-	
 }
 
 /**
- * @brief  在 ILI9341 显示器上显示一个英文字符
- * @param  usX ：在特定扫描方向下字符的起始X坐标
- * @param  usY ：在特定扫描方向下该点的起始Y坐标
- * @param  cChar ：要显示的英文字符
- * @note 可使用LCD_SetBackColor、LCD_SetTextColor、LCD_SetColors函数设置颜色
- * @retval 无
+ * @brief  脭脷 ILI9341 脧脭脢戮脝梅脡脧脧脭脢戮脪禄赂枚脫垄脦脛脳脰路没
+ * @param  usX 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脳脰路没碌脛脝冒脢录X脳酶卤锚
+ * @param  usY 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗赂脙碌茫碌脛脝冒脢录Y脳酶卤锚
+ * @param  cChar 拢潞脪陋脧脭脢戮碌脛脫垄脦脛脳脰路没
+ * @note 驴脡脢鹿脫脙LCD_SetBackColor隆垄LCD_SetTextColor隆垄LCD_SetColors潞炉脢媒脡猫脰脙脩脮脡芦
+ * @retval 脦脼
  */
-void ILI9341_DispChar_EN ( uint16_t usX, uint16_t usY, const char cChar )
+void ILI9341_DispChar_EN(uint16_t usX, uint16_t usY, const char cChar)
 {
-	uint8_t  byteCount, bitCount,fontLength;	
+	uint8_t byteCount, bitCount, fontLength;
 	uint16_t ucRelativePositon;
 	uint8_t *Pfont;
-	
-	//对ascii码表偏移（字模表不包含ASCII表的前32个非图形符号）
-	ucRelativePositon = cChar - ' ';
-	
-	//每个字模的字节数
-	fontLength = (LCD_Currentfonts->Width*LCD_Currentfonts->Height)/8;
-		
-	//字模首地址
-	/*ascii码表偏移值乘以每个字模的字节数，求出字模的偏移位置*/
-	Pfont = (uint8_t *)&LCD_Currentfonts->table[ucRelativePositon * fontLength];
-	
-	//设置显示窗口
-	ILI9341_OpenWindow ( usX, usY, LCD_Currentfonts->Width, LCD_Currentfonts->Height);
-	
-	ILI9341_Write_Cmd ( CMD_SetPixel );			
 
-	//按字节读取字模数据
-	//由于前面直接设置了显示窗口，显示数据会自动换行
-	for ( byteCount = 0; byteCount < fontLength; byteCount++ )
+	//露脭ascii脗毛卤铆脝芦脪脝拢篓脳脰脛拢卤铆虏禄掳眉潞卢ASCII卤铆碌脛脟掳32赂枚路脟脥录脨脦路没潞脜拢漏
+	ucRelativePositon = cChar - ' ';
+
+	//脙驴赂枚脳脰脛拢碌脛脳脰陆脷脢媒
+	fontLength = (LCD_Currentfonts->Width * LCD_Currentfonts->Height) / 8;
+
+	//脳脰脛拢脢脳碌脴脰路
+	/*ascii脗毛卤铆脝芦脪脝脰碌鲁脣脪脭脙驴赂枚脳脰脛拢碌脛脳脰陆脷脢媒拢卢脟贸鲁枚脳脰脛拢碌脛脝芦脪脝脦禄脰脙*/
+	Pfont = (uint8_t *)&LCD_Currentfonts->table[ucRelativePositon * fontLength];
+
+	//脡猫脰脙脧脭脢戮麓掳驴脷
+	ILI9341_OpenWindow(usX, usY, LCD_Currentfonts->Width, LCD_Currentfonts->Height);
+
+	ILI9341_Write_Cmd(CMD_SetPixel);
+
+	//掳麓脳脰陆脷露脕脠隆脳脰脛拢脢媒戮脻
+	//脫脡脫脷脟掳脙忙脰卤陆脫脡猫脰脙脕脣脧脭脢戮麓掳驴脷拢卢脧脭脢戮脢媒戮脻禄谩脳脭露炉禄禄脨脨
+	for (byteCount = 0; byteCount < fontLength; byteCount++)
 	{
-			//一位一位处理要显示的颜色
-			for ( bitCount = 0; bitCount < 8; bitCount++ )
-			{
-					if ( Pfont[byteCount] & (0x80>>bitCount) )
-						ILI9341_Write_Data ( CurrentTextColor );			
-					else
-						ILI9341_Write_Data ( CurrentBackColor );
-			}	
-	}	
+		//脪禄脦禄脪禄脦禄麓娄脌铆脪陋脧脭脢戮碌脛脩脮脡芦
+		for (bitCount = 0; bitCount < 8; bitCount++)
+		{
+			if (Pfont[byteCount] & (0x80 >> bitCount))
+				ILI9341_Write_Data(CurrentTextColor);
+			else
+				ILI9341_Write_Data(CurrentBackColor);
+		}
+	}
 }
 
-
 /**
- * @brief  在 ILI9341 显示器上显示英文字符串
- * @param  line ：在特定扫描方向下字符串的起始Y坐标
-  *   本参数可使用宏LINE(0)、LINE(1)等方式指定文字坐标，
-  *   宏LINE(x)会根据当前选择的字体来计算Y坐标值。
-	*		显示中文且使用LINE宏时，需要把英文字体设置成Font8x16
- * @param  pStr ：要显示的英文字符串的首地址
- * @note 可使用LCD_SetBackColor、LCD_SetTextColor、LCD_SetColors函数设置颜色
- * @retval 无
+ * @brief  脭脷 ILI9341 脧脭脢戮脝梅脡脧脧脭脢戮脫垄脦脛脳脰路没麓庐
+ * @param  line 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脳脰路没麓庐碌脛脝冒脢录Y脳酶卤锚
+  *   卤戮虏脦脢媒驴脡脢鹿脫脙潞锚LINE(0)隆垄LINE(1)碌脠路陆脢陆脰赂露篓脦脛脳脰脳酶卤锚拢卢
+  *   潞锚LINE(x)禄谩赂霉戮脻碌卤脟掳脩隆脭帽碌脛脳脰脤氓脌麓录脝脣茫Y脳酶卤锚脰碌隆拢
+	*		脧脭脢戮脰脨脦脛脟脪脢鹿脫脙LINE潞锚脢卤拢卢脨猫脪陋掳脩脫垄脦脛脳脰脤氓脡猫脰脙鲁脡Font8x16
+ * @param  pStr 拢潞脪陋脧脭脢戮碌脛脫垄脦脛脳脰路没麓庐碌脛脢脳碌脴脰路
+ * @note 驴脡脢鹿脫脙LCD_SetBackColor隆垄LCD_SetTextColor隆垄LCD_SetColors潞炉脢媒脡猫脰脙脩脮脡芦
+ * @retval 脦脼
  */
-void ILI9341_DispStringLine_EN (  uint16_t line,  char * pStr )
+void ILI9341_DispStringLine_EN(uint16_t line, char *pStr)
 {
 	uint16_t usX = 0;
-	
-	while ( * pStr != '\0' )
+
+	while (*pStr != '\0')
 	{
-		if ( ( usX - ILI9341_DispWindow_X_Star + LCD_Currentfonts->Width ) > LCD_X_LENGTH )
+		if ((usX - ILI9341_DispWindow_X_Star + LCD_Currentfonts->Width) > LCD_X_LENGTH)
 		{
 			usX = ILI9341_DispWindow_X_Star;
 			line += LCD_Currentfonts->Height;
 		}
-		
-		if ( ( line - ILI9341_DispWindow_Y_Star + LCD_Currentfonts->Height ) > LCD_Y_LENGTH )
+
+		if ((line - ILI9341_DispWindow_Y_Star + LCD_Currentfonts->Height) > LCD_Y_LENGTH)
 		{
 			usX = ILI9341_DispWindow_X_Star;
 			line = ILI9341_DispWindow_Y_Star;
 		}
-		
-		ILI9341_DispChar_EN ( usX, line, * pStr);
-		
-		pStr ++;
-		
+
+		ILI9341_DispChar_EN(usX, line, *pStr);
+
+		pStr++;
+
 		usX += LCD_Currentfonts->Width;
-		
 	}
-	
 }
 
-
 /**
- * @brief  在 ILI9341 显示器上显示英文字符串
- * @param  usX ：在特定扫描方向下字符的起始X坐标
- * @param  usY ：在特定扫描方向下字符的起始Y坐标
- * @param  pStr ：要显示的英文字符串的首地址
- * @note 可使用LCD_SetBackColor、LCD_SetTextColor、LCD_SetColors函数设置颜色
- * @retval 无
+ * @brief  脭脷 ILI9341 脧脭脢戮脝梅脡脧脧脭脢戮脫垄脦脛脳脰路没麓庐
+ * @param  usX 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脳脰路没碌脛脝冒脢录X脳酶卤锚
+ * @param  usY 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脳脰路没碌脛脝冒脢录Y脳酶卤锚
+ * @param  pStr 拢潞脪陋脧脭脢戮碌脛脫垄脦脛脳脰路没麓庐碌脛脢脳碌脴脰路
+ * @note 驴脡脢鹿脫脙LCD_SetBackColor隆垄LCD_SetTextColor隆垄LCD_SetColors潞炉脢媒脡猫脰脙脩脮脡芦
+ * @retval 脦脼
  */
-void ILI9341_DispString_EN ( 	uint16_t usX ,uint16_t usY,  char * pStr )
+void ILI9341_DispString_EN(uint16_t usX, uint16_t usY, char *pStr)
 {
-	while ( * pStr != '\0' )
+	while (*pStr != '\0')
 	{
-		if ( ( usX - ILI9341_DispWindow_X_Star + LCD_Currentfonts->Width ) > LCD_X_LENGTH )
+		if ((usX - ILI9341_DispWindow_X_Star + LCD_Currentfonts->Width) > LCD_X_LENGTH)
 		{
 			usX = ILI9341_DispWindow_X_Star;
 			usY += LCD_Currentfonts->Height;
 		}
-		
-		if ( ( usY - ILI9341_DispWindow_Y_Star + LCD_Currentfonts->Height ) > LCD_Y_LENGTH )
+
+		if ((usY - ILI9341_DispWindow_Y_Star + LCD_Currentfonts->Height) > LCD_Y_LENGTH)
 		{
 			usX = ILI9341_DispWindow_X_Star;
 			usY = ILI9341_DispWindow_Y_Star;
 		}
-		
-		ILI9341_DispChar_EN ( usX, usY, * pStr);
-		
-		pStr ++;
-		
+
+		ILI9341_DispChar_EN(usX, usY, *pStr);
+
+		pStr++;
+
 		usX += LCD_Currentfonts->Width;
-		
 	}
-	
 }
 
-
 /**
- * @brief  在 ILI9341 显示器上显示英文字符串(沿Y轴方向)
- * @param  usX ：在特定扫描方向下字符的起始X坐标
- * @param  usY ：在特定扫描方向下字符的起始Y坐标
- * @param  pStr ：要显示的英文字符串的首地址
- * @note 可使用LCD_SetBackColor、LCD_SetTextColor、LCD_SetColors函数设置颜色
- * @retval 无
+ * @brief  脭脷 ILI9341 脧脭脢戮脝梅脡脧脧脭脢戮脫垄脦脛脳脰路没麓庐(脩脴Y脰谩路陆脧貌)
+ * @param  usX 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脳脰路没碌脛脝冒脢录X脳酶卤锚
+ * @param  usY 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脳脰路没碌脛脝冒脢录Y脳酶卤锚
+ * @param  pStr 拢潞脪陋脧脭脢戮碌脛脫垄脦脛脳脰路没麓庐碌脛脢脳碌脴脰路
+ * @note 驴脡脢鹿脫脙LCD_SetBackColor隆垄LCD_SetTextColor隆垄LCD_SetColors潞炉脢媒脡猫脰脙脩脮脡芦
+ * @retval 脦脼
  */
-void ILI9341_DispString_EN_YDir (	 uint16_t usX,uint16_t usY ,  char * pStr )
-{	
-	while ( * pStr != '\0' )
+void ILI9341_DispString_EN_YDir(uint16_t usX, uint16_t usY, char *pStr)
+{
+	while (*pStr != '\0')
 	{
-		if ( ( usY - ILI9341_DispWindow_Y_Star + LCD_Currentfonts->Height ) >LCD_Y_LENGTH  )
+		if ((usY - ILI9341_DispWindow_Y_Star + LCD_Currentfonts->Height) > LCD_Y_LENGTH)
 		{
 			usY = ILI9341_DispWindow_Y_Star;
 			usX += LCD_Currentfonts->Width;
 		}
-		
-		if ( ( usX - ILI9341_DispWindow_X_Star + LCD_Currentfonts->Width ) >  LCD_X_LENGTH)
+
+		if ((usX - ILI9341_DispWindow_X_Star + LCD_Currentfonts->Width) > LCD_X_LENGTH)
 		{
 			usX = ILI9341_DispWindow_X_Star;
 			usY = ILI9341_DispWindow_Y_Star;
 		}
-		
-		ILI9341_DispChar_EN ( usX, usY, * pStr);
-		
-		pStr ++;
-		
-		usY += LCD_Currentfonts->Height;		
-	}	
+
+		ILI9341_DispChar_EN(usX, usY, *pStr);
+
+		pStr++;
+
+		usY += LCD_Currentfonts->Height;
+	}
 }
 
-
 /**
-  * @brief  设置英文字体类型
-  * @param  fonts: 指定要选择的字体
-	*		参数为以下值之一
-  * 	@arg：Font24x32;
-  * 	@arg：Font16x24;
-  * 	@arg：Font8x16;
+  * @brief  脡猫脰脙脫垄脦脛脳脰脤氓脌脿脨脥
+  * @param  fonts: 脰赂露篓脪陋脩隆脭帽碌脛脳脰脤氓
+	*		虏脦脢媒脦陋脪脭脧脗脰碌脰庐脪禄
+  * 	@arg拢潞Font24x32;
+  * 	@arg拢潞Font16x24;
+  * 	@arg拢潞Font8x16;
   * @retval None
   */
 void LCD_SetFont(sFONT *fonts)
 {
-  LCD_Currentfonts = fonts;
+	LCD_Currentfonts = fonts;
 }
 
 /**
-  * @brief  获取当前字体类型
+  * @brief  禄帽脠隆碌卤脟掳脳脰脤氓脌脿脨脥
   * @param  None.
-  * @retval 返回当前字体类型
+  * @retval 路碌禄脴碌卤脟掳脳脰脤氓脌脿脨脥
   */
 sFONT *LCD_GetFont(void)
 {
-  return LCD_Currentfonts;
+	return LCD_Currentfonts;
 }
 
-
 /**
-  * @brief  设置LCD的前景(字体)及背景颜色,RGB565
-  * @param  TextColor: 指定前景(字体)颜色
-  * @param  BackColor: 指定背景颜色
+  * @brief  脡猫脰脙LCD碌脛脟掳戮掳(脳脰脤氓)录掳卤鲁戮掳脩脮脡芦,RGB565
+  * @param  TextColor: 脰赂露篓脟掳戮掳(脳脰脤氓)脩脮脡芦
+  * @param  BackColor: 脰赂露篓卤鲁戮掳脩脮脡芦
   * @retval None
   */
-void LCD_SetColors(uint16_t TextColor, uint16_t BackColor) 
+void LCD_SetColors(uint16_t TextColor, uint16_t BackColor)
 {
-  CurrentTextColor = TextColor; 
-  CurrentBackColor = BackColor;
+	CurrentTextColor = TextColor;
+	CurrentBackColor = BackColor;
 }
 
 /**
-  * @brief  获取LCD的前景(字体)及背景颜色,RGB565
-  * @param  TextColor: 用来存储前景(字体)颜色的指针变量
-  * @param  BackColor: 用来存储背景颜色的指针变量
+  * @brief  禄帽脠隆LCD碌脛脟掳戮掳(脳脰脤氓)录掳卤鲁戮掳脩脮脡芦,RGB565
+  * @param  TextColor: 脫脙脌麓麓忙麓垄脟掳戮掳(脳脰脤氓)脩脮脡芦碌脛脰赂脮毛卤盲脕驴
+  * @param  BackColor: 脫脙脌麓麓忙麓垄卤鲁戮掳脩脮脡芦碌脛脰赂脮毛卤盲脕驴
   * @retval None
   */
 void LCD_GetColors(uint16_t *TextColor, uint16_t *BackColor)
 {
-  *TextColor = CurrentTextColor;
-  *BackColor = CurrentBackColor;
+	*TextColor = CurrentTextColor;
+	*BackColor = CurrentBackColor;
 }
 
 /**
-  * @brief  设置LCD的前景(字体)颜色,RGB565
-  * @param  Color: 指定前景(字体)颜色 
+  * @brief  脡猫脰脙LCD碌脛脟掳戮掳(脳脰脤氓)脩脮脡芦,RGB565
+  * @param  Color: 脰赂露篓脟掳戮掳(脳脰脤氓)脩脮脡芦 
   * @retval None
   */
 void LCD_SetTextColor(uint16_t Color)
 {
-  CurrentTextColor = Color;
+	CurrentTextColor = Color;
 }
 
 /**
-  * @brief  设置LCD的背景颜色,RGB565
-  * @param  Color: 指定背景颜色 
+  * @brief  脡猫脰脙LCD碌脛卤鲁戮掳脩脮脡芦,RGB565
+  * @param  Color: 脰赂露篓卤鲁戮掳脩脮脡芦 
   * @retval None
   */
 void LCD_SetBackColor(uint16_t Color)
 {
-  CurrentBackColor = Color;
+	CurrentBackColor = Color;
 }
 
 /**
-  * @brief  清除某行文字
-  * @param  Line: 指定要删除的行
-  *   本参数可使用宏LINE(0)、LINE(1)等方式指定要删除的行，
-  *   宏LINE(x)会根据当前选择的字体来计算Y坐标值，并删除当前字体高度的第x行。
+  * @brief  脟氓鲁媒脛鲁脨脨脦脛脳脰
+  * @param  Line: 脰赂露篓脪陋脡戮鲁媒碌脛脨脨
+  *   卤戮虏脦脢媒驴脡脢鹿脫脙潞锚LINE(0)隆垄LINE(1)碌脠路陆脢陆脰赂露篓脪陋脡戮鲁媒碌脛脨脨拢卢
+  *   潞锚LINE(x)禄谩赂霉戮脻碌卤脟掳脩隆脭帽碌脛脳脰脤氓脌麓录脝脣茫Y脳酶卤锚脰碌拢卢虏垄脡戮鲁媒碌卤脟掳脳脰脤氓赂脽露脠碌脛碌脷x脨脨隆拢
   * @retval None
   */
 void LCD_ClearLine(uint16_t Line)
 {
-  ILI9341_Clear(0,Line,LCD_X_LENGTH,((sFONT *)LCD_GetFont())->Height);	/* 清屏，显示全黑 */
-
+	ILI9341_Clear(0, Line, LCD_X_LENGTH, ((sFONT *)LCD_GetFont())->Height); /* 脟氓脝脕拢卢脧脭脢戮脠芦潞脷 */
 }
+/**
+ * @brief  脭脷 ILI9341 脧脭脢戮脝梅脡脧脧脭脢戮脪禄赂枚脰脨脦脛脳脰路没
+ * @param  usX 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脳脰路没碌脛脝冒脢录X脳酶卤锚
+ * @param  usY 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脳脰路没碌脛脝冒脢录Y脳酶卤锚
+ * @param  usChar 拢潞脪陋脧脭脢戮碌脛脰脨脦脛脳脰路没拢篓鹿煤卤锚脗毛拢漏
+ * @note 驴脡脢鹿脫脙LCD_SetBackColor隆垄LCD_SetTextColor隆垄LCD_SetColors潞炉脢媒脡猫脰脙脩脮脡芦
+ * @retval 脦脼
+ */
+void ILI9341_DispChar_CH(uint16_t usX, uint16_t usY, uint16_t usChar)
+{
+	uint8_t rowCount, bitCount;
+	uint8_t ucBuffer[WIDTH_CH_CHAR * HEIGHT_CH_CHAR / 8];
+	uint16_t usTemp;
+
+	//脡猫脰脙脧脭脢戮麓掳驴脷
+	ILI9341_OpenWindow(usX, usY, WIDTH_CH_CHAR, HEIGHT_CH_CHAR);
+
+	ILI9341_Write_Cmd(CMD_SetPixel);
+
+	//脠隆脳脰脛拢脢媒戮脻
+	GetGBKCode(ucBuffer, usChar);
+
+	for (rowCount = 0; rowCount < HEIGHT_CH_CHAR; rowCount++)
+	{
+		/* 脠隆鲁枚脕陆赂枚脳脰陆脷碌脛脢媒戮脻拢卢脭脷lcd脡脧录麓脢脟脪禄赂枚潞潞脳脰碌脛脪禄脨脨 */
+		usTemp = ucBuffer[rowCount * 2];
+		usTemp = (usTemp << 8);
+		usTemp |= ucBuffer[rowCount * 2 + 1];
+
+		for (bitCount = 0; bitCount < WIDTH_CH_CHAR; bitCount++)
+		{
+			if (usTemp & (0x8000 >> bitCount)) //赂脽脦禄脭脷脟掳
+				ILI9341_Write_Data(CurrentTextColor);
+			else
+				ILI9341_Write_Data(CurrentBackColor);
+		}
+	}
+}
+
+/**
+ * @brief  脭脷 ILI9341 脧脭脢戮脝梅脡脧脧脭脢戮脰脨脦脛脳脰路没麓庐
+ * @param  line 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脳脰路没麓庐碌脛脝冒脢录Y脳酶卤锚
+  *   卤戮虏脦脢媒驴脡脢鹿脫脙潞锚LINE(0)隆垄LINE(1)碌脠路陆脢陆脰赂露篓脦脛脳脰脳酶卤锚拢卢
+  *   潞锚LINE(x)禄谩赂霉戮脻碌卤脟掳脩隆脭帽碌脛脳脰脤氓脌麓录脝脣茫Y脳酶卤锚脰碌隆拢
+	*		脧脭脢戮脰脨脦脛脟脪脢鹿脫脙LINE潞锚脢卤拢卢脨猫脪陋掳脩脫垄脦脛脳脰脤氓脡猫脰脙鲁脡Font8x16
+ * @param  pStr 拢潞脪陋脧脭脢戮碌脛脫垄脦脛脳脰路没麓庐碌脛脢脳碌脴脰路
+ * @note 驴脡脢鹿脫脙LCD_SetBackColor隆垄LCD_SetTextColor隆垄LCD_SetColors潞炉脢媒脡猫脰脙脩脮脡芦
+ * @retval 脦脼
+ */
+void ILI9341_DispString_CH(uint16_t usX, uint16_t usY, char *pStr)
+{
+	uint16_t usCh;
+
+	while (*pStr != '\0')
+	{
+		if ((usX - ILI9341_DispWindow_X_Star + WIDTH_CH_CHAR) > LCD_X_LENGTH)
+		{
+			usX = ILI9341_DispWindow_X_Star;
+			usY += HEIGHT_CH_CHAR;
+		}
+
+		if ((usY - ILI9341_DispWindow_Y_Star + HEIGHT_CH_CHAR) > LCD_Y_LENGTH)
+		{
+			usX = ILI9341_DispWindow_X_Star;
+			usY = ILI9341_DispWindow_Y_Star;
+		}
+
+		usCh = *(uint16_t *)pStr;
+		usCh = (usCh << 8) + (usCh >> 8);
+
+		ILI9341_DispChar_CH(usX, usY, usCh);
+
+		usX += WIDTH_CH_CHAR;
+
+		pStr += 2; //脪禄赂枚潞潞脳脰脕陆赂枚脳脰陆脷
+	}
+}
+
+/**
+ * @brief  脭脷 ILI9341 脧脭脢戮脝梅脡脧脧脭脢戮脰脨脫垄脦脛脳脰路没麓庐
+ * @param  line 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脳脰路没麓庐碌脛脝冒脢录Y脳酶卤锚
+  *   卤戮虏脦脢媒驴脡脢鹿脫脙潞锚LINE(0)隆垄LINE(1)碌脠路陆脢陆脰赂露篓脦脛脳脰脳酶卤锚拢卢
+  *   潞锚LINE(x)禄谩赂霉戮脻碌卤脟掳脩隆脭帽碌脛脳脰脤氓脌麓录脝脣茫Y脳酶卤锚脰碌隆拢
+	*		脧脭脢戮脰脨脦脛脟脪脢鹿脫脙LINE潞锚脢卤拢卢脨猫脪陋掳脩脫垄脦脛脳脰脤氓脡猫脰脙鲁脡Font8x16
+ * @param  pStr 拢潞脪陋脧脭脢戮碌脛脳脰路没麓庐碌脛脢脳碌脴脰路
+ * @note 驴脡脢鹿脫脙LCD_SetBackColor隆垄LCD_SetTextColor隆垄LCD_SetColors潞炉脢媒脡猫脰脙脩脮脡芦
+ * @retval 脦脼
+ */
+void ILI9341_DispStringLine_EN_CH(uint16_t line, char *pStr)
+{
+	uint16_t usCh;
+	uint16_t usX = 0;
+
+	while (*pStr != '\0')
+	{
+		if (*pStr <= 126) //脫垄脦脛脳脰路没
+		{
+			if ((usX - ILI9341_DispWindow_X_Star + LCD_Currentfonts->Width) > LCD_X_LENGTH)
+			{
+				usX = ILI9341_DispWindow_X_Star;
+				line += LCD_Currentfonts->Height;
+			}
+
+			if ((line - ILI9341_DispWindow_Y_Star + LCD_Currentfonts->Height) > LCD_Y_LENGTH)
+			{
+				usX = ILI9341_DispWindow_X_Star;
+				line = ILI9341_DispWindow_Y_Star;
+			}
+
+			ILI9341_DispChar_EN(usX, line, *pStr);
+
+			usX += LCD_Currentfonts->Width;
+
+			pStr++;
+		}
+
+		else //潞潞脳脰脳脰路没
+		{
+			if ((usX - ILI9341_DispWindow_X_Star + WIDTH_CH_CHAR) > LCD_X_LENGTH)
+			{
+				usX = ILI9341_DispWindow_X_Star;
+				line += HEIGHT_CH_CHAR;
+			}
+
+			if ((line - ILI9341_DispWindow_Y_Star + HEIGHT_CH_CHAR) > LCD_Y_LENGTH)
+			{
+				usX = ILI9341_DispWindow_X_Star;
+				line = ILI9341_DispWindow_Y_Star;
+			}
+
+			usCh = *(uint16_t *)pStr;
+
+			usCh = (usCh << 8) + (usCh >> 8);
+
+			ILI9341_DispChar_CH(usX, line, usCh);
+
+			usX += WIDTH_CH_CHAR;
+
+			pStr += 2; //脪禄赂枚潞潞脳脰脕陆赂枚脳脰陆脷
+		}
+	}
+}
+
+/**
+ * @brief  脭脷 ILI9341 脧脭脢戮脝梅脡脧脧脭脢戮脰脨脫垄脦脛脳脰路没麓庐
+ * @param  usX 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脳脰路没碌脛脝冒脢录X脳酶卤锚
+ * @param  usY 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脳脰路没碌脛脝冒脢录Y脳酶卤锚
+ * @param  pStr 拢潞脪陋脧脭脢戮碌脛脳脰路没麓庐碌脛脢脳碌脴脰路
+ * @note 驴脡脢鹿脫脙LCD_SetBackColor隆垄LCD_SetTextColor隆垄LCD_SetColors潞炉脢媒脡猫脰脙脩脮脡芦
+ * @retval 脦脼
+ */
+void ILI9341_DispString_EN_CH(uint16_t usX, uint16_t usY, char *pStr)
+{
+	uint16_t usCh;
+
+	while (*pStr != '\0')
+	{
+		if (*pStr <= 126) //脫垄脦脛脳脰路没
+		{
+			if ((usX - ILI9341_DispWindow_X_Star + LCD_Currentfonts->Width) > LCD_X_LENGTH)
+			{
+				usX = ILI9341_DispWindow_X_Star;
+				usY += LCD_Currentfonts->Height;
+			}
+
+			if ((usY - ILI9341_DispWindow_Y_Star + LCD_Currentfonts->Height) > LCD_Y_LENGTH)
+			{
+				usX = ILI9341_DispWindow_X_Star;
+				usY = ILI9341_DispWindow_Y_Star;
+			}
+
+			ILI9341_DispChar_EN(usX, usY, *pStr);
+
+			usX += LCD_Currentfonts->Width;
+
+			pStr++;
+		}
+
+		else //潞潞脳脰脳脰路没
+		{
+			if ((usX - ILI9341_DispWindow_X_Star + WIDTH_CH_CHAR) > LCD_X_LENGTH)
+			{
+				usX = ILI9341_DispWindow_X_Star;
+				usY += HEIGHT_CH_CHAR;
+			}
+
+			if ((usY - ILI9341_DispWindow_Y_Star + HEIGHT_CH_CHAR) > LCD_Y_LENGTH)
+			{
+				usX = ILI9341_DispWindow_X_Star;
+				usY = ILI9341_DispWindow_Y_Star;
+			}
+
+			usCh = *(uint16_t *)pStr;
+
+			usCh = (usCh << 8) + (usCh >> 8);
+
+			ILI9341_DispChar_CH(usX, usY, usCh);
+
+			usX += WIDTH_CH_CHAR;
+
+			pStr += 2; //脪禄赂枚潞潞脳脰脕陆赂枚脳脰陆脷
+		}
+	}
+}
+
+/**
+ * @brief  脭脷 ILI9341 脧脭脢戮脝梅脡脧脧脭脢戮脰脨脫垄脦脛脳脰路没麓庐(脩脴Y脰谩路陆脧貌)
+ * @param  usX 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脳脰路没碌脛脝冒脢录X脳酶卤锚
+ * @param  usY 拢潞脭脷脤脴露篓脡篓脙猫路陆脧貌脧脗脳脰路没碌脛脝冒脢录Y脳酶卤锚
+ * @param  pStr 拢潞脪陋脧脭脢戮碌脛脰脨脫垄脦脛脳脰路没麓庐碌脛脢脳碌脴脰路
+ * @note 驴脡脢鹿脫脙LCD_SetBackColor隆垄LCD_SetTextColor隆垄LCD_SetColors潞炉脢媒脡猫脰脙脩脮脡芦
+ * @retval 脦脼
+ */
+void ILI9341_DispString_EN_CH_YDir(uint16_t usX, uint16_t usY, char *pStr)
+{
+	uint16_t usCh;
+
+	while (*pStr != '\0')
+	{
+		//脥鲁脪禄脢鹿脫脙潞潞脳脰碌脛驴铆赂脽脌麓录脝脣茫禄禄脨脨
+		if ((usY - ILI9341_DispWindow_Y_Star + HEIGHT_CH_CHAR) > LCD_Y_LENGTH)
+		{
+			usY = ILI9341_DispWindow_Y_Star;
+			usX += WIDTH_CH_CHAR;
+		}
+		if ((usX - ILI9341_DispWindow_X_Star + WIDTH_CH_CHAR) > LCD_X_LENGTH)
+		{
+			usX = ILI9341_DispWindow_X_Star;
+			usY = ILI9341_DispWindow_Y_Star;
+		}
+
+		//脧脭脢戮
+		if (*pStr <= 126) //脫垄脦脛脳脰路没
+		{
+			ILI9341_DispChar_EN(usX, usY, *pStr);
+
+			pStr++;
+
+			usY += HEIGHT_CH_CHAR;
+		}
+		else //潞潞脳脰脳脰路没
+		{
+			usCh = *(uint16_t *)pStr;
+
+			usCh = (usCh << 8) + (usCh >> 8);
+
+			ILI9341_DispChar_CH(usX, usY, usCh);
+
+			usY += HEIGHT_CH_CHAR;
+
+			pStr += 2; //脪禄赂枚潞潞脳脰脕陆赂枚脳脰陆脷
+		}
+	}
+}
+
 /*********************end of file*************************/
-
-
-

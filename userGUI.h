@@ -1,3 +1,9 @@
+/*
+ * @文件描述: 
+ * @版本: 
+ * @作者: 周晨阳
+ * @Date: 2020-06-21 16:05:31
+ */
 /**
  * 
  * 这个usergui文件是一个类似显卡的处理
@@ -10,7 +16,6 @@
 #ifndef _USER_GUI_H_
 #define _USER_GUI_H_
 
-  
 #include "bsp_ili9341_lcd.h"
 #include "voltageMeter.h"
 #include "CurrentMeter.h"
@@ -34,6 +39,5 @@ void setNumTitle(float num);
 //设置单位
 void setUnit(unsigned char unit);
 void GUIInit();
-
 
 #endif

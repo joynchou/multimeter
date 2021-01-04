@@ -19,7 +19,6 @@
 #include <stddef.h>
 #include "public.h"
 
-
 //private function:
 
 //private var
@@ -27,38 +26,52 @@
 /**************变量声明**************/
 static void (*modeButtonFunc)();
 static void (*holdButtonFunc)();
-
+static void (*changeFactorButtonFunc)();
 /**************函数定义**************/
 /**
  * @description: 
  * @param {type} 
  * @return {type} 
  */
-void setModeButtonListener(void (*callback)()){
-    modeButtonFunc=callback;
-}
-/**
- * @description: 
- * @param {type} 
- * @return {type} 
- */
-void setHoldButtonListener(void (*callback)()){
-    holdButtonFunc=callback;
-}
-/**
- * @description: 
- * @param {type} 
- * @return {type} 
- */
-static uint8_t Key_Scan(GPIO_TypeDef *GPIOx,uint16_t GPIO_Pin)
+void setModeButtonListener(void (*callback)())
 {
-	if( GPIO_ReadInputDataBit(GPIOx, GPIO_Pin) == KEY_ON )
+	modeButtonFunc = callback;
+}
+/**
+ * @description: 
+ * @param {type} 
+ * @return {type} 
+ */
+void setHoldButtonListener(void (*callback)())
+{
+	holdButtonFunc = callback;
+}
+/**
+ * @description: 
+ * @param {*}
+ * @return {*}
+ */
+void setChangeFactorButtonLis(void(*callback))
+{
+	changeFactorButtonFunc = callback;
+}
+
+/**
+ * @description: 
+ * @param {type} 
+ * @return {type} 
+ */
+static uint8_t Key_Scan(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin)
+{
+	if (GPIO_ReadInputDataBit(GPIOx, GPIO_Pin) == KEY_ON)
 	{
-		
-		while( GPIO_ReadInputDataBit(GPIOx, GPIO_Pin) == KEY_ON );
+
+		while (GPIO_ReadInputDataBit(GPIOx, GPIO_Pin) == KEY_ON)
+			;
 		return KEY_ON;
 	}
-	else return KEY_OFF;
+	else
+		return KEY_OFF;
 }
 
 /**
@@ -68,15 +81,15 @@ static uint8_t Key_Scan(GPIO_TypeDef *GPIOx,uint16_t GPIO_Pin)
  */
 void LED_GPIO_Config(void)
 {
-	GPIO_InitTypeDef  GPIO_InitStruct;
-	
+	GPIO_InitTypeDef GPIO_InitStruct;
+
 	RCC_APB2PeriphClockCmd(LED_G_GPIO_CLK, ENABLE);
-	
+
 	GPIO_InitStruct.GPIO_Pin = LED_G_GPIO_PIN;
 	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_Out_PP;
 	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-	
-	GPIO_Init(LED_G_GPIO_PORT, &GPIO_InitStruct);	
+
+	GPIO_Init(LED_G_GPIO_PORT, &GPIO_InitStruct);
 }
 
 /**
@@ -84,52 +97,60 @@ void LED_GPIO_Config(void)
  * @param {type} 
  * @return {type} 
  */
-void buttonLooper(){
+void buttonLooper()
+{
 
-    if(modeButtonFunc!=NULL){
-        //加入判断按键按下的语句
-        if(Key_Scan(KEY1_GPIO_PORT,KEY1_GPIO_PIN)){
-            (*modeButtonFunc)();
-        }
+	if (modeButtonFunc != NULL)
+	{
+		//加入判断按键按下的语句
+		if (Key_Scan(KEY1_GPIO_PORT, KEY1_GPIO_PIN))
+		{
+			(*modeButtonFunc)();
+		}
+	}
+	if (holdButtonFunc != NULL)
+	{
+		//加入判断按键按下的语句
 
-        
-    }
-    if(holdButtonFunc!=NULL){
-        //加入判断按键按下的语句
+		if (Key_Scan(KEY2_GPIO_PORT, KEY2_GPIO_PIN))
+		{
+			(*holdButtonFunc)();
+			//按hold键led灯会反转
+			LED_G_TOGGLE;
+		}
+	}
 
-        if(Key_Scan(KEY2_GPIO_PORT,KEY2_GPIO_PIN)){
-            (*holdButtonFunc)();
-            //按hold键led灯会反转
-						LED_G_TOGGLE;
-        }
-
-      
-    }
+	if (changeFactorButtonFunc != NULL)
+	{
+		//加入判断按键按下的语句
+		//todo:更改按键的引脚
+		//if(Key_Scan(KEY1_GPIO_PORT,KEY1_GPIO_PIN)){
+		//    (*changeFactorButtonFunc)();
+		// }
+	}
 }
 /**
  * @description: 按键初始化
  * @param {type} 
  * @return {type} 
  */
-void buttonInit(){
+void buttonInit()
+{
 
-	GPIO_InitTypeDef  GPIO_InitStruct;
+	GPIO_InitTypeDef GPIO_InitStruct;
 	LED_GPIO_Config();
-	
-	
+
 	RCC_APB2PeriphClockCmd(KEY1_GPIO_CLK, ENABLE);
-	
+
 	GPIO_InitStruct.GPIO_Pin = KEY1_GPIO_PIN;
 	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-	
-	GPIO_Init(KEY1_GPIO_PORT, &GPIO_InitStruct);	
 
-    GPIO_InitStruct.GPIO_Pin = KEY2_GPIO_PIN;
+	GPIO_Init(KEY1_GPIO_PORT, &GPIO_InitStruct);
+
+	GPIO_InitStruct.GPIO_Pin = KEY2_GPIO_PIN;
 	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-	
-	GPIO_Init(KEY2_GPIO_PORT, &GPIO_InitStruct);	
-	
+
+	GPIO_Init(KEY2_GPIO_PORT, &GPIO_InitStruct);
+
 	printf("button init done...\n");
 }
-
-

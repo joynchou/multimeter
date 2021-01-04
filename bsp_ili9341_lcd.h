@@ -1,213 +1,200 @@
-/*
- * @ÎÄ¼þÃèÊö: TFTÆÁÄ»µÄÍ·ÎÄ¼þ
- * @°æ±¾: 
- * @×÷Õß: ÖÜ³¿Ñô
- * @Date: 2020-08-21 11:53:57
- */
-
-#ifndef      __BSP_ILI9341_LCD_H
-#define	     __BSP_ILI9341_LCD_H
-
+#ifndef __BSP_ILI9341_LCD_H
+#define __BSP_ILI9341_LCD_H
 
 #include "stm32f10x.h"
 #include "fonts.h"
 
-
 /***************************************************************************************
-2^26 =0X0400 0000 = 64MB,Ã¿¸ö BANK ÓÐ4*64MB = 256MB
+2^26 =0X0400 0000 = 64MB,Ã¿ï¿½ï¿½ BANK ï¿½ï¿½4*64MB = 256MB
 64MB:FSMC_Bank1_NORSRAM1:0X6000 0000 ~ 0X63FF FFFF
 64MB:FSMC_Bank1_NORSRAM2:0X6400 0000 ~ 0X67FF FFFF
 64MB:FSMC_Bank1_NORSRAM3:0X6800 0000 ~ 0X6BFF FFFF
 64MB:FSMC_Bank1_NORSRAM4:0X6C00 0000 ~ 0X6FFF FFFF
 
-Ñ¡ÔñBANK1-BORSRAM1 Á¬½Ó TFT£¬µØÖ··¶Î§Îª0X6000 0000 ~ 0X63FF FFFF
-FSMC_A16 ½ÓLCDµÄDC(¼Ä´æÆ÷/Êý¾ÝÑ¡Ôñ)½Å
-¼Ä´æÆ÷»ùµØÖ· = 0X60000000
-RAM»ùµØÖ· = 0X60020000 = 0X60000000+2^16*2 = 0X60000000 + 0X20000 = 0X60020000
-µ±Ñ¡Ôñ²»Í¬µÄµØÖ·ÏßÊ±£¬µØÖ·ÒªÖØÐÂ¼ÆËã  
+Ñ¡ï¿½ï¿½BANK1-BORSRAM1 ï¿½ï¿½ï¿½ï¿½ TFTï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½Î§Îª0X6000 0000 ~ 0X63FF FFFF
+FSMC_A16 ï¿½ï¿½LCDï¿½ï¿½DC(ï¿½Ä´ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½)ï¿½ï¿½
+ï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö· = 0X60000000
+RAMï¿½ï¿½ï¿½ï¿½Ö· = 0X60020000 = 0X60000000+2^16*2 = 0X60000000 + 0X20000 = 0X60020000
+ï¿½ï¿½Ñ¡ï¿½ï¿½Í¬ï¿½Äµï¿½Ö·ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Ö·Òªï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½  
 ****************************************************************************************/
 
-/******************************* ILI9341 ÏÔÊ¾ÆÁµÄ FSMC ²ÎÊý¶¨Òå ***************************/
-//FSMC_Bank1_NORSRAMÓÃÓÚLCDÃüÁî²Ù×÷µÄµØÖ·
-#define      FSMC_Addr_ILI9341_CMD         ( ( uint32_t ) 0x60000000 )
+/******************************* ILI9341 ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ FSMC ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ***************************/
+//FSMC_Bank1_NORSRAMï¿½ï¿½ï¿½ï¿½LCDï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Äµï¿½Ö·
+#define FSMC_Addr_ILI9341_CMD ((uint32_t)0x60000000)
 
-//FSMC_Bank1_NORSRAMÓÃÓÚLCDÊý¾Ý²Ù×÷µÄµØÖ·      
-#define      FSMC_Addr_ILI9341_DATA        ( ( uint32_t ) 0x60020000 )
+//FSMC_Bank1_NORSRAMï¿½ï¿½ï¿½ï¿½LCDï¿½ï¿½ï¿½Ý²ï¿½ï¿½ï¿½ï¿½Äµï¿½Ö·
+#define FSMC_Addr_ILI9341_DATA ((uint32_t)0x60020000)
 
-//ÓÉÆ¬Ñ¡Òý½Å¾ö¶¨µÄNOR/SRAM¿é
-#define      FSMC_Bank1_NORSRAMx           FSMC_Bank1_NORSRAM1
+//ï¿½ï¿½Æ¬Ñ¡ï¿½ï¿½ï¿½Å¾ï¿½ï¿½ï¿½ï¿½ï¿½NOR/SRAMï¿½ï¿½
+#define FSMC_Bank1_NORSRAMx FSMC_Bank1_NORSRAM1
 
+/******************************* ILI9341 ï¿½ï¿½Ê¾ï¿½ï¿½8080Í¨Ñ¶ï¿½ï¿½ï¿½Å¶ï¿½ï¿½ï¿½ ***************************/
+/******ï¿½ï¿½ï¿½ï¿½ï¿½Åºï¿½ï¿½ï¿½******/
+//Æ¬Ñ¡ï¿½ï¿½Ñ¡ï¿½ï¿½NOR/SRAMï¿½ï¿½
+#define ILI9341_CS_CLK RCC_APB2Periph_GPIOD
+#define ILI9341_CS_PORT GPIOD
+#define ILI9341_CS_PIN GPIO_Pin_7
 
-
-/******************************* ILI9341 ÏÔÊ¾ÆÁ8080Í¨Ñ¶Òý½Å¶¨Òå ***************************/
-/******¿ØÖÆÐÅºÅÏß******/
-//Æ¬Ñ¡£¬Ñ¡ÔñNOR/SRAM¿é
-#define      ILI9341_CS_CLK                RCC_APB2Periph_GPIOD   
-#define      ILI9341_CS_PORT               GPIOD
-#define      ILI9341_CS_PIN                GPIO_Pin_7
-
-//DCÒý½Å£¬Ê¹ÓÃFSMCµÄµØÖ·ÐÅºÅ¿ØÖÆ£¬±¾Òý½Å¾ö¶¨ÁË·ÃÎÊLCDÊ±Ê¹ÓÃµÄµØÖ·
+//DCï¿½ï¿½ï¿½Å£ï¿½Ê¹ï¿½ï¿½FSMCï¿½Äµï¿½Ö·ï¿½ÅºÅ¿ï¿½ï¿½Æ£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å¾ï¿½ï¿½ï¿½ï¿½Ë·ï¿½ï¿½ï¿½LCDÊ±Ê¹ï¿½ÃµÄµï¿½Ö·
 //PD11ÎªFSMC_A16
-#define      ILI9341_DC_CLK                RCC_APB2Periph_GPIOD   
-#define      ILI9341_DC_PORT               GPIOD
-#define      ILI9341_DC_PIN                GPIO_Pin_11
+#define ILI9341_DC_CLK RCC_APB2Periph_GPIOD
+#define ILI9341_DC_PORT GPIOD
+#define ILI9341_DC_PIN GPIO_Pin_11
 
-//Ð´Ê¹ÄÜ
-#define      ILI9341_WR_CLK                RCC_APB2Periph_GPIOD   
-#define      ILI9341_WR_PORT               GPIOD
-#define      ILI9341_WR_PIN                GPIO_Pin_5
+//Ð´Ê¹ï¿½ï¿½
+#define ILI9341_WR_CLK RCC_APB2Periph_GPIOD
+#define ILI9341_WR_PORT GPIOD
+#define ILI9341_WR_PIN GPIO_Pin_5
 
-//¶ÁÊ¹ÄÜ
-#define      ILI9341_RD_CLK                RCC_APB2Periph_GPIOD   
-#define      ILI9341_RD_PORT               GPIOD
-#define      ILI9341_RD_PIN                GPIO_Pin_4
+//ï¿½ï¿½Ê¹ï¿½ï¿½
+#define ILI9341_RD_CLK RCC_APB2Periph_GPIOD
+#define ILI9341_RD_PORT GPIOD
+#define ILI9341_RD_PIN GPIO_Pin_4
 
-//¸´Î»Òý½Å
-#define      ILI9341_RST_CLK               RCC_APB2Periph_GPIOE
-#define      ILI9341_RST_PORT              GPIOE
-#define      ILI9341_RST_PIN               GPIO_Pin_1
+//ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½
+#define ILI9341_RST_CLK RCC_APB2Periph_GPIOE
+#define ILI9341_RST_PORT GPIOE
+#define ILI9341_RST_PIN GPIO_Pin_1
 
-//±³¹âÒý½Å
-#define      ILI9341_BK_CLK                RCC_APB2Periph_GPIOD    
-#define      ILI9341_BK_PORT               GPIOD
-#define      ILI9341_BK_PIN                GPIO_Pin_12
+//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+#define ILI9341_BK_CLK RCC_APB2Periph_GPIOD
+#define ILI9341_BK_PORT GPIOD
+#define ILI9341_BK_PIN GPIO_Pin_12
 
-/********Êý¾ÝÐÅºÅÏß***************/
-#define      ILI9341_D0_CLK                RCC_APB2Periph_GPIOD   
-#define      ILI9341_D0_PORT               GPIOD
-#define      ILI9341_D0_PIN                GPIO_Pin_14
+/********ï¿½ï¿½ï¿½ï¿½ï¿½Åºï¿½ï¿½ï¿½***************/
+#define ILI9341_D0_CLK RCC_APB2Periph_GPIOD
+#define ILI9341_D0_PORT GPIOD
+#define ILI9341_D0_PIN GPIO_Pin_14
 
-#define      ILI9341_D1_CLK                RCC_APB2Periph_GPIOD   
-#define      ILI9341_D1_PORT               GPIOD
-#define      ILI9341_D1_PIN                GPIO_Pin_15
+#define ILI9341_D1_CLK RCC_APB2Periph_GPIOD
+#define ILI9341_D1_PORT GPIOD
+#define ILI9341_D1_PIN GPIO_Pin_15
 
-#define      ILI9341_D2_CLK                RCC_APB2Periph_GPIOD   
-#define      ILI9341_D2_PORT               GPIOD
-#define      ILI9341_D2_PIN                GPIO_Pin_0
+#define ILI9341_D2_CLK RCC_APB2Periph_GPIOD
+#define ILI9341_D2_PORT GPIOD
+#define ILI9341_D2_PIN GPIO_Pin_0
 
-#define      ILI9341_D3_CLK                RCC_APB2Periph_GPIOD  
-#define      ILI9341_D3_PORT               GPIOD
-#define      ILI9341_D3_PIN                GPIO_Pin_1
+#define ILI9341_D3_CLK RCC_APB2Periph_GPIOD
+#define ILI9341_D3_PORT GPIOD
+#define ILI9341_D3_PIN GPIO_Pin_1
 
-#define      ILI9341_D4_CLK                RCC_APB2Periph_GPIOE   
-#define      ILI9341_D4_PORT               GPIOE
-#define      ILI9341_D4_PIN                GPIO_Pin_7
+#define ILI9341_D4_CLK RCC_APB2Periph_GPIOE
+#define ILI9341_D4_PORT GPIOE
+#define ILI9341_D4_PIN GPIO_Pin_7
 
-#define      ILI9341_D5_CLK                RCC_APB2Periph_GPIOE   
-#define      ILI9341_D5_PORT               GPIOE
-#define      ILI9341_D5_PIN                GPIO_Pin_8
+#define ILI9341_D5_CLK RCC_APB2Periph_GPIOE
+#define ILI9341_D5_PORT GPIOE
+#define ILI9341_D5_PIN GPIO_Pin_8
 
-#define      ILI9341_D6_CLK                RCC_APB2Periph_GPIOE   
-#define      ILI9341_D6_PORT               GPIOE
-#define      ILI9341_D6_PIN                GPIO_Pin_9
+#define ILI9341_D6_CLK RCC_APB2Periph_GPIOE
+#define ILI9341_D6_PORT GPIOE
+#define ILI9341_D6_PIN GPIO_Pin_9
 
-#define      ILI9341_D7_CLK                RCC_APB2Periph_GPIOE  
-#define      ILI9341_D7_PORT               GPIOE
-#define      ILI9341_D7_PIN                GPIO_Pin_10
+#define ILI9341_D7_CLK RCC_APB2Periph_GPIOE
+#define ILI9341_D7_PORT GPIOE
+#define ILI9341_D7_PIN GPIO_Pin_10
 
-#define      ILI9341_D8_CLK                RCC_APB2Periph_GPIOE   
-#define      ILI9341_D8_PORT               GPIOE
-#define      ILI9341_D8_PIN                GPIO_Pin_11
+#define ILI9341_D8_CLK RCC_APB2Periph_GPIOE
+#define ILI9341_D8_PORT GPIOE
+#define ILI9341_D8_PIN GPIO_Pin_11
 
-#define      ILI9341_D9_CLK                RCC_APB2Periph_GPIOE   
-#define      ILI9341_D9_PORT               GPIOE
-#define      ILI9341_D9_PIN                GPIO_Pin_12
+#define ILI9341_D9_CLK RCC_APB2Periph_GPIOE
+#define ILI9341_D9_PORT GPIOE
+#define ILI9341_D9_PIN GPIO_Pin_12
 
-#define      ILI9341_D10_CLK                RCC_APB2Periph_GPIOE   
-#define      ILI9341_D10_PORT               GPIOE
-#define      ILI9341_D10_PIN                GPIO_Pin_13
+#define ILI9341_D10_CLK RCC_APB2Periph_GPIOE
+#define ILI9341_D10_PORT GPIOE
+#define ILI9341_D10_PIN GPIO_Pin_13
 
-#define      ILI9341_D11_CLK                RCC_APB2Periph_GPIOE   
-#define      ILI9341_D11_PORT               GPIOE
-#define      ILI9341_D11_PIN                GPIO_Pin_14
+#define ILI9341_D11_CLK RCC_APB2Periph_GPIOE
+#define ILI9341_D11_PORT GPIOE
+#define ILI9341_D11_PIN GPIO_Pin_14
 
-#define      ILI9341_D12_CLK                RCC_APB2Periph_GPIOE   
-#define      ILI9341_D12_PORT               GPIOE
-#define      ILI9341_D12_PIN                GPIO_Pin_15
+#define ILI9341_D12_CLK RCC_APB2Periph_GPIOE
+#define ILI9341_D12_PORT GPIOE
+#define ILI9341_D12_PIN GPIO_Pin_15
 
-#define      ILI9341_D13_CLK                RCC_APB2Periph_GPIOD   
-#define      ILI9341_D13_PORT               GPIOD
-#define      ILI9341_D13_PIN                GPIO_Pin_8
+#define ILI9341_D13_CLK RCC_APB2Periph_GPIOD
+#define ILI9341_D13_PORT GPIOD
+#define ILI9341_D13_PIN GPIO_Pin_8
 
-#define      ILI9341_D14_CLK                RCC_APB2Periph_GPIOD   
-#define      ILI9341_D14_PORT               GPIOD
-#define      ILI9341_D14_PIN                GPIO_Pin_9
+#define ILI9341_D14_CLK RCC_APB2Periph_GPIOD
+#define ILI9341_D14_PORT GPIOD
+#define ILI9341_D14_PIN GPIO_Pin_9
 
-#define      ILI9341_D15_CLK                RCC_APB2Periph_GPIOD   
-#define      ILI9341_D15_PORT               GPIOD
-#define      ILI9341_D15_PIN                GPIO_Pin_10
+#define ILI9341_D15_CLK RCC_APB2Periph_GPIOD
+#define ILI9341_D15_PORT GPIOD
+#define ILI9341_D15_PIN GPIO_Pin_10
 
-/*************************************** µ÷ÊÔÔ¤ÓÃ ******************************************/
-#define      DEBUG_DELAY()                
+/*************************************** ï¿½ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½ ******************************************/
+#define DEBUG_DELAY()
 
-/***************************** ILI934 ÏÔÊ¾ÇøÓòµÄÆðÊ¼×ø±êºÍ×ÜÐÐÁÐÊý ***************************/
-#define      ILI9341_DispWindow_X_Star		    0     //ÆðÊ¼µãµÄX×ø±ê
-#define      ILI9341_DispWindow_Y_Star		    0     //ÆðÊ¼µãµÄY×ø±ê
+/***************************** ILI934 ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ***************************/
+#define ILI9341_DispWindow_X_Star 0 //ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½Xï¿½ï¿½ï¿½ï¿½
+#define ILI9341_DispWindow_Y_Star 0 //ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½Yï¿½ï¿½ï¿½ï¿½
 
-#define 			ILI9341_LESS_PIXEL	  							240			//Òº¾§ÆÁ½Ï¶Ì·½ÏòµÄÏñËØ¿í¶È
-#define 			ILI9341_MORE_PIXEL	 								320			//Òº¾§ÆÁ½Ï³¤·½ÏòµÄÏñËØ¿í¶È
+#define ILI9341_LESS_PIXEL 240 //Òºï¿½ï¿½ï¿½ï¿½ï¿½Ï¶Ì·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø¿ï¿½ï¿½ï¿½
+#define ILI9341_MORE_PIXEL 320 //Òºï¿½ï¿½ï¿½ï¿½ï¿½Ï³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø¿ï¿½ï¿½ï¿½
 
-//¸ù¾ÝÒº¾§É¨Ãè·½Ïò¶ø±ä»¯µÄXYÏñËØ¿í¶È
-//µ÷ÓÃILI9341_GramScanº¯ÊýÉèÖÃ·½ÏòÊ±»á×Ô¶¯¸ü¸Ä
-extern uint16_t LCD_X_LENGTH,LCD_Y_LENGTH; 
+//ï¿½ï¿½ï¿½ï¿½Òºï¿½ï¿½É¨ï¿½è·½ï¿½ï¿½ï¿½ï¿½ä»¯ï¿½ï¿½XYï¿½ï¿½ï¿½Ø¿ï¿½ï¿½ï¿½
+//ï¿½ï¿½ï¿½ï¿½ILI9341_GramScanï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã·ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½
+extern uint16_t LCD_X_LENGTH, LCD_Y_LENGTH;
 
-//Òº¾§ÆÁÉ¨ÃèÄ£Ê½
-//²ÎÊý¿ÉÑ¡ÖµÎª0-7
+//Òºï¿½ï¿½ï¿½ï¿½É¨ï¿½ï¿½Ä£Ê½
+//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¡ÖµÎª0-7
 extern uint8_t LCD_SCAN_MODE;
 
-/******************************* ¶¨Òå ILI934 ÏÔÊ¾ÆÁ³£ÓÃÑÕÉ« ********************************/
-#define      BACKGROUND		                BLACK   //Ä¬ÈÏ±³¾°ÑÕÉ«
+/******************************* ï¿½ï¿½ï¿½ï¿½ ILI934 ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É« ********************************/
+#define BACKGROUND BLACK //Ä¬ï¿½Ï±ï¿½ï¿½ï¿½ï¿½ï¿½É«
 
-#define      WHITE		 		                  0xFFFF	   //°×É«
-#define      BLACK                         0x0000	   //ºÚÉ« 
-#define      GREY                          0xF7DE	   //»ÒÉ« 
-#define      BLUE                          0x001F	   //À¶É« 
-#define      BLUE2                         0x051F	   //Ç³À¶É« 
-#define      RED                           0xF800	   //ºìÉ« 
-#define      MAGENTA                       0xF81F	   //ºì×ÏÉ«£¬ÑóºìÉ« 
-#define      GREEN                         0x07E0	   //ÂÌÉ« 
-#define      CYAN                          0x7FFF	   //À¶ÂÌÉ«£¬ÇàÉ« 
-#define      YELLOW                        0xFFE0	   //»ÆÉ« 
-#define      BRED                          0xF81F
-#define      GRED                          0xFFE0
-#define      GBLUE                         0x07FF
+#define WHITE 0xFFFF   //ï¿½ï¿½É«
+#define BLACK 0x0000   //ï¿½ï¿½É«
+#define GREY 0xF7DE    //ï¿½ï¿½É«
+#define BLUE 0x001F    //ï¿½ï¿½É«
+#define BLUE2 0x051F   //Ç³ï¿½ï¿½É«
+#define RED 0xF800     //ï¿½ï¿½É«
+#define MAGENTA 0xF81F //ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½ï¿½ï¿½ï¿½É«
+#define GREEN 0x07E0   //ï¿½ï¿½É«
+#define CYAN 0x7FFF    //ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½ï¿½ï¿½É«
+#define YELLOW 0xFFE0  //ï¿½ï¿½É«
+#define BRED 0xF81F
+#define GRED 0xFFE0
+#define GBLUE 0x07FF
 
+/******************************* ï¿½ï¿½ï¿½ï¿½ ILI934 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ********************************/
+#define CMD_SetCoordinateX 0x2A //ï¿½ï¿½ï¿½ï¿½Xï¿½ï¿½ï¿½ï¿½
+#define CMD_SetCoordinateY 0x2B //ï¿½ï¿½ï¿½ï¿½Yï¿½ï¿½ï¿½ï¿½
+#define CMD_SetPixel 0x2C       //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
+/********************************** ï¿½ï¿½ï¿½ï¿½ ILI934 ï¿½ï¿½ï¿½ï¿½ ***************************************/
+void ILI9341_Init(void);
+void ILI9341_Rst(void);
+void ILI9341_BackLed_Control(FunctionalState enumState);
+void ILI9341_GramScan(uint8_t ucOtion);
+void ILI9341_OpenWindow(uint16_t usX, uint16_t usY, uint16_t usWidth, uint16_t usHeight);
+void ILI9341_Clear(uint16_t usX, uint16_t usY, uint16_t usWidth, uint16_t usHeight);
+void ILI9341_SetPointPixel(uint16_t usX, uint16_t usY);
+uint16_t ILI9341_GetPointPixel(uint16_t usX, uint16_t usY);
+void ILI9341_DrawLine(uint16_t usX1, uint16_t usY1, uint16_t usX2, uint16_t usY2);
+void ILI9341_DrawRectangle(uint16_t usX_Start, uint16_t usY_Start, uint16_t usWidth, uint16_t usHeight, uint8_t ucFilled);
+void ILI9341_DrawCircle(uint16_t usX_Center, uint16_t usY_Center, uint16_t usRadius, uint8_t ucFilled);
+void ILI9341_DispChar_EN(uint16_t usX, uint16_t usY, const char cChar);
+void ILI9341_DispStringLine_EN(uint16_t line, char *pStr);
+void ILI9341_DispString_EN(uint16_t usX, uint16_t usY, char *pStr);
+void ILI9341_DispString_EN_YDir(uint16_t usX, uint16_t usY, char *pStr);
 
-/******************************* ¶¨Òå ILI934 ³£ÓÃÃüÁî ********************************/
-#define      CMD_SetCoordinateX		 		    0x2A	     //ÉèÖÃX×ø±ê
-#define      CMD_SetCoordinateY		 		    0x2B	     //ÉèÖÃY×ø±ê
-#define      CMD_SetPixel		 		          0x2C	     //Ìî³äÏñËØ
+void ILI9341_DispChar_CH(uint16_t usX, uint16_t usY, uint16_t usChar);
+void ILI9341_DispString_CH(uint16_t usX, uint16_t usY, char *pStr);
+void ILI9341_DispString_EN_CH(uint16_t usX, uint16_t usY, char *pStr);
+void ILI9341_DispStringLine_EN_CH(uint16_t line, char *pStr);
+void ILI9341_DispString_EN_CH_YDir(uint16_t usX, uint16_t usY, char *pStr);
 
-
-
-
-/********************************** ÉùÃ÷ ILI934 º¯Êý ***************************************/
-void                     ILI9341_Init                    ( void );
-void                     ILI9341_Rst                     ( void );
-void                     ILI9341_BackLed_Control         ( FunctionalState enumState );
-void                     ILI9341_GramScan                ( uint8_t ucOtion );
-void                     ILI9341_OpenWindow              ( uint16_t usX, uint16_t usY, uint16_t usWidth, uint16_t usHeight );
-void                     ILI9341_Clear                   ( uint16_t usX, uint16_t usY, uint16_t usWidth, uint16_t usHeight );
-void                     ILI9341_SetPointPixel           ( uint16_t usX, uint16_t usY );
-uint16_t                 ILI9341_GetPointPixel           ( uint16_t usX , uint16_t usY );
-void                     ILI9341_DrawLine                ( uint16_t usX1, uint16_t usY1, uint16_t usX2, uint16_t usY2 );
-void                     ILI9341_DrawRectangle           ( uint16_t usX_Start, uint16_t usY_Start, uint16_t usWidth, uint16_t usHeight,uint8_t ucFilled );
-void                     ILI9341_DrawCircle              ( uint16_t usX_Center, uint16_t usY_Center, uint16_t usRadius, uint8_t ucFilled );
-void                     ILI9341_DispChar_EN             ( uint16_t usX, uint16_t usY, const char cChar );
-void                     ILI9341_DispStringLine_EN      ( uint16_t line, char * pStr );
-void                     ILI9341_DispString_EN      			( uint16_t usX, uint16_t usY, char * pStr );
-void 											ILI9341_DispString_EN_YDir 		(   uint16_t usX,uint16_t usY ,  char * pStr );
-
-void 											LCD_SetFont											(sFONT *fonts);
-sFONT 										*LCD_GetFont											(void);
-void 											LCD_ClearLine										(uint16_t Line);
-void 											LCD_SetBackColor								(uint16_t Color);
-void 											LCD_SetTextColor								(uint16_t Color)	;
-void 											LCD_SetColors										(uint16_t TextColor, uint16_t BackColor);
-void 											LCD_GetColors										(uint16_t *TextColor, uint16_t *BackColor);
-
+void LCD_SetFont(sFONT *fonts);
+sFONT *LCD_GetFont(void);
+void LCD_ClearLine(uint16_t Line);
+void LCD_SetBackColor(uint16_t Color);
+void LCD_SetTextColor(uint16_t Color);
+void LCD_SetColors(uint16_t TextColor, uint16_t BackColor);
+void LCD_GetColors(uint16_t *TextColor, uint16_t *BackColor);
 
 #endif /* __BSP_ILI9341_ILI9341_H */
-
-

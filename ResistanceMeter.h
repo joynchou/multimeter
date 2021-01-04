@@ -1,3 +1,9 @@
+/*
+ * @文件描述: 
+ * @版本: 
+ * @作者: 周晨阳
+ * @Date: 2020-06-21 15:48:25
+ */
 /**
  *欧姆表模块 
  * 
@@ -19,5 +25,6 @@ void ResistanceMeterInit();
 float getCurrentRes();
 unsigned char getR_Unit();
 void ResistanceMeterLooper();
-
+void changeResistanceFactor(int factor);
+int getResistanceFactor();
 #endif

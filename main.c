@@ -15,7 +15,11 @@
 /**************头文件**************/
 #include "main.h"
 #include <stdio.h>
-
+#include "filter.h"
+#include "bsp_xpt2046_lcd.h"
+#include "GUI.h"
+#include <rtthread.h>
+#include "mainPage.h"
 /**************函数声明**************/
 unsigned char currentMode;
 void init();
@@ -23,22 +27,80 @@ void onHoldButtonClicked();
 void onModeButtonClicked();
 
 /**************函数定义**************/
+void buttonThread(void *parameter)
+{
+    while (1)
+    {
+        buttonLooper();
+
+        rt_thread_mdelay(200);
+    }
+}
+void touchScreenThread(void *parameter)
+{
+    while (1)
+    {
+
+        GUI_TOUCH_Exec(); //调用UCGUI TOUCH相关函数
+        rt_thread_mdelay(10);
+    }
+}
+void tftUpdateThread(void *parameter)
+{
+    while (1)
+    {
+
+        mainLoop();
+        rt_thread_mdelay(100);
+    }
+}
+
+static struct rt_thread tftUpdateThread_ptr;
+static rt_uint8_t tftUpdateThread_stack[1000];
+
+static struct rt_thread touchScreenThread_ptr;
+static rt_uint8_t touchScreenThread_stack[800];
+
+static struct rt_thread buttonThread_ptr;
+static rt_uint8_t buttonThread_stack[200];
 
 int main()
 {
 
+    rt_err_t result;
     init();
 
-    while(1){
-        //放置各个模块的looper，模拟不同的线程运行
+    /* 启动线程 */
 
-        //按键监听循环,如果按键引脚悬空将会导致程序进入死循环
-         //buttonLooper();
-        //数值更新循环
-         valueUpdateLooper();
-        
-        
-    }
+    result = rt_thread_init(&touchScreenThread_ptr,
+                            "touchScreenThread",
+                            touchScreenThread, RT_NULL,
+                            &touchScreenThread_stack[0], sizeof(touchScreenThread_stack),
+                            0, 100);
+
+    /* 启动线程 */
+    result = rt_thread_init(&buttonThread_ptr,
+                            "buttonThread",
+                            buttonThread, RT_NULL,
+                            &buttonThread_stack[0], sizeof(buttonThread_stack),
+                            2, 100);
+
+    result = rt_thread_init(&tftUpdateThread_ptr,
+                            "tftUpdateThread",
+                            tftUpdateThread, RT_NULL,
+                            &tftUpdateThread_stack[0], sizeof(tftUpdateThread_stack),
+                            7, 100);
+
+    rt_thread_startup(&tftUpdateThread_ptr);
+    printf("tftUpdateThread created\n");
+
+    rt_thread_startup(&touchScreenThread_ptr);
+    printf("touchScreenThread created\n");
+
+    rt_thread_startup(&buttonThread_ptr);
+    printf("button scan thread created\n");
+
+    return 0;
 }
 
 /**
@@ -46,84 +108,85 @@ int main()
  * @param {type} 
  * @return {type} 
  */
-void init(){
-	
-	
-	
+void init()
+{
+
     //串口初始化
     USART_Config();
+    DSP_Init();
     //GUI初始化
     GUIInit();
-    
-	  
+    GUI_Init();
+
+    MainTask();
+
+    GUI_CURSOR_Show();
     //按键初始化
     buttonInit();
 
     //不同表初始化
+    CurrentMeterInit();
     VoltageMeterInit();
     ResistanceMeterInit();
-    CurrentMeterInit();
-
 
     //设置按键回调函数
-   setHoldButtonListener(onHoldButtonClicked);
-   setModeButtonListener(onModeButtonClicked);
-    
+    setHoldButtonListener(onHoldButtonClicked);
+    setModeButtonListener(onModeButtonClicked);
+
     //设置初始模式为电压表
-    switchMode(MODE_VOLTAGE);
-    
-
-
+    //switchMode(MODE_VOLTAGE);
 }
 /**
  * @description: 数值更新函数，根据当前模式自动开启相应的模块并更新屏幕显示
  * @param {type} 
  * @return {type} 
  */
-void valueUpdateLooper(){
-    
-        switch( getCurrentMode() ){
-            case MODE_VOLTAGE:
-                //模块更新函数
-                VoltageMeterLooper();
-                setNumTitle(getVoltage());
-                setUnit(getU_Unit());
-                break;
-            case MODE_CURRENT:
-                CurrentMeterLooper();
-                setNumTitle(getCurrent());
-                setUnit(getI_Unit());
-                break;
-            case MODE_RESISTANCE:
-                ResistanceMeterLooper();
-                setNumTitle(getCurrentRes());
-                setUnit(getR_Unit());
-                break;
+void valueUpdateLooper()
+{
 
-        }
-
+    switch (getCurrentMode())
+    {
+    case MODE_VOLTAGE:
+        //模块更新函数
+        VoltageMeterLooper();
+        setNumTitle(getVoltage());
+        setUnit(getU_Unit());
+        break;
+    case MODE_CURRENT:
+        CurrentMeterLooper();
+        setNumTitle(getCurrent());
+        setUnit(getI_Unit());
+        break;
+    case MODE_RESISTANCE:
+        ResistanceMeterLooper();
+        setNumTitle(getCurrentRes());
+        setUnit(getR_Unit());
+        break;
+    }
 }
 /**
  * @description: hold按键按下时暂停屏幕更新功能
  * @param {type} 
  * @return {type} 
  */
-void onHoldButtonClicked(){
+void onHoldButtonClicked()
+{
     holdTrigger();
-    
 }
 /**
  * @description: 模式按键按下时切换模式
  * @param {type} 
  * @return {type} 
  */
-void onModeButtonClicked(){
-    if (getCurrentMode()==2)
+void onModeButtonClicked()
+{
+    if (getCurrentMode() == 2)
     {
         switchMode(0);
     }
-    else{
-        switchMode(getCurrentMode()+1);
+    else
+    {
+        switchMode(getCurrentMode() + 1);
     }
 }
 /**
@@ -131,42 +194,37 @@ void onModeButtonClicked(){
  * @param {type} 
  * @return {type} 
  */
-void switchMode(unsigned char mode){
+void switchMode(unsigned char mode)
+{
     switch (mode)
     {
     case MODE_VOLTAGE:
-        currentMode=MODE_VOLTAGE;
+        currentMode = MODE_VOLTAGE;
         setDisplayMode(MODE_VOLTAGE);
         //打开和关闭相应的模块
         closeCurrentMeter();
         closeResistanceMeter();
         openVoltageMeter();
-       
-        
+
         break;
     case MODE_CURRENT:
-        currentMode=MODE_CURRENT;
+        currentMode = MODE_CURRENT;
         setDisplayMode(MODE_CURRENT);
 
         closeResistanceMeter();
         closeVoltageMeter();
         openCurrentMeter();
-        
+
         break;
     case MODE_RESISTANCE:
-        currentMode=MODE_RESISTANCE;
+        currentMode = MODE_RESISTANCE;
         setDisplayMode(MODE_RESISTANCE);
-        
+
         closeVoltageMeter();
         closeCurrentMeter();
         openResistanceMeter();
-        
-        
+
         break;
-
-    
-
-    
     }
 }
 /**
@@ -174,6 +232,7 @@ void switchMode(unsigned char mode){
  * @param {type} 
  * @return {type} 
  */
-unsigned char getCurrentMode(){
+unsigned char getCurrentMode()
+{
     return currentMode;
 }

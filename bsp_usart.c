@@ -7,13 +7,11 @@
 
 /**
   * @brief   �����õ�printf���ڣ��ض���printf������
-  */ 
-
+  */
 
 #include "bsp_usart.h"
 
-
- /**
+/**
   * @brief  USART GPIO ����,������������
   * @param  ��
   * @retval ��
@@ -25,7 +23,7 @@ void USART_Config(void)
 
 	// �򿪴���GPIO��ʱ��
 	DEBUG_USART_GPIO_APBxClkCmd(DEBUG_USART_GPIO_CLK, ENABLE);
-	
+
 	// �򿪴��������ʱ��
 	DEBUG_USART_APBxClkCmd(DEBUG_USART_CLK, ENABLE);
 
@@ -35,11 +33,11 @@ void USART_Config(void)
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_Init(DEBUG_USART_TX_GPIO_PORT, &GPIO_InitStructure);
 
-  // ��USART Rx��GPIO����Ϊ��������ģʽ
+	// ��USART Rx��GPIO����Ϊ��������ģʽ
 	GPIO_InitStructure.GPIO_Pin = DEBUG_USART_RX_GPIO_PIN;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
 	GPIO_Init(DEBUG_USART_RX_GPIO_PORT, &GPIO_InitStructure);
-	
+
 	// ���ô��ڵĹ�������
 	// ���ò�����
 	USART_InitStructure.USART_BaudRate = DEBUG_USART_BAUDRATE;
@@ -48,7 +46,7 @@ void USART_Config(void)
 	// ����ֹͣλ
 	USART_InitStructure.USART_StopBits = USART_StopBits_1;
 	// ����У��λ
-	USART_InitStructure.USART_Parity = USART_Parity_No ;
+	USART_InitStructure.USART_Parity = USART_Parity_No;
 	// ����Ӳ��������
 	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
 	// ���ù���ģʽ���շ�һ��
@@ -57,29 +55,29 @@ void USART_Config(void)
 	USART_Init(DEBUG_USARTx, &USART_InitStructure);
 
 	// ʹ�ܴ���
-	USART_Cmd(DEBUG_USARTx, ENABLE);	
-	printf("USART init done...\n");    
+	USART_Cmd(DEBUG_USARTx, ENABLE);
+	printf("USART init done...\n");
 }
-
 
 ///�ض���c�⺯��printf�����ڣ��ض�����ʹ��printf����
 int fputc(int ch, FILE *f)
 {
-		/* ����һ���ֽ����ݵ����� */
-		USART_SendData(DEBUG_USARTx, (uint8_t) ch);
-		
-		/* �ȴ�������� */
-		while (USART_GetFlagStatus(DEBUG_USARTx, USART_FLAG_TXE) == RESET);		
-	
-		return (ch);
+	/* ����һ���ֽ����ݵ����� */
+	USART_SendData(DEBUG_USARTx, (uint8_t)ch);
+
+	/* �ȴ�������� */
+	while (USART_GetFlagStatus(DEBUG_USARTx, USART_FLAG_TXE) == RESET)
+		;
+
+	return (ch);
 }
 
 ///�ض���c�⺯��scanf�����ڣ���д����ʹ��scanf��getchar�Ⱥ���
 int fgetc(FILE *f)
 {
-		/* �ȴ������������� */
-		while (USART_GetFlagStatus(DEBUG_USARTx, USART_FLAG_RXNE) == RESET);
+	/* �ȴ������������� */
+	while (USART_GetFlagStatus(DEBUG_USARTx, USART_FLAG_RXNE) == RESET)
+		;
 
-		return (int)USART_ReceiveData(DEBUG_USARTx);
+	return (int)USART_ReceiveData(DEBUG_USARTx);
 }
-

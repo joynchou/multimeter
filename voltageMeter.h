@@ -12,14 +12,15 @@
 #define UNIT_MV 4
 #define UNIT_UV 5
 
-#define  KEY_ON      1
-#define  KEY_OFF     0
+#define KEY_ON 1
+#define KEY_OFF 0
 
 void VoltageMeterInit();
 void openVoltageMeter();
 void closeVoltageMeter();
 unsigned char getVoltageMeterState();
-
+void changeVoltageFactor(int factor);
+int getVoltageFactor();
 float getVoltage();
 unsigned char getU_Unit();
 //电压表的looper，需要放在main的while中不停的循环以便一直能获取最新的数值

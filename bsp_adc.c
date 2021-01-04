@@ -1,62 +1,61 @@
 /*
- * @ÎÄ¼şÃèÊö: ADCµÄÅäÖÃºÍ³õÊ¼»¯³ÌĞò
- * @°æ±¾: 
- * @×÷Õß: ÖÜ³¿Ñô
+ * @æ–‡ä»¶æè¿°: ADCçš„é…ç½®å’Œåˆå§‹åŒ–ç¨‹åº
+ * @ç‰ˆæœ¬: 
+ * @ä½œè€…: å‘¨æ™¨é˜³
  * @Date: 2020-08-21 13:30:41
  */
 
-/**************Í·ÎÄ¼ş**************/
+/**************å¤´æ–‡ä»¶**************/
 #include "bsp_adc.h"
 #include <stddef.h>
 
+/**************å®å®šä¹‰**************/
 
-/**************ºê¶¨Òå**************/
-
-
-/**************±äÁ¿ÉùÃ÷**************/
+/**************å˜é‡å£°æ˜**************/
 
 extern void (*ADC_callbackFun)(int);
 
-/**************º¯Êı¶¨Òå**************/
+/**************å‡½æ•°å®šä¹‰**************/
 
 //static void ADCx_GPIO_Config(void)
 //{
 //	GPIO_InitTypeDef GPIO_InitStructure;
-//	
-//	// ´ò¿ª ADC IO¶Ë¿ÚÊ±ÖÓ
+//
+//	// æ‰“å¼€ ADC IOç«¯å£æ—¶é’Ÿ
 //	ADC_GPIO_APBxClock_FUN ( ADC_GPIO_CLK, ENABLE );
-//	
-//	// ÅäÖÃ ADC IO Òı½ÅÄ£Ê½
-//	// ±ØĞëÎªÄ£ÄâÊäÈë
+//
+//	// é…ç½® ADC IO å¼•è„šæ¨¡å¼
+//	// å¿…é¡»ä¸ºæ¨¡æ‹Ÿè¾“å…¥
 //	GPIO_InitStructure.GPIO_Pin = ADC_PIN;
 //	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AIN;
-//	
-//	// ³õÊ¼»¯ ADC IO
-//	GPIO_Init(ADC_PORT, &GPIO_InitStructure);	
+//
+//	// åˆå§‹åŒ– ADC IO
+//	GPIO_Init(ADC_PORT, &GPIO_InitStructure);
 //}
 
 /**
- * @description: ADCÄ£Ê½ÉèÖÃ
- * @param {ADCx:Éè¶¨ÄÄÒ»¸öadc£¬¿ÉÒÔÎªADC1£¬2£¬3
- * 			channel:Éè¶¨ÄÄÒ»¸öÆµµÀ} 
+ * @description: ADCæ¨¡å¼è®¾ç½®
+ * @param {ADCx:è®¾å®šå“ªä¸€ä¸ªadcï¼Œå¯ä»¥ä¸ºADC1ï¼Œ2ï¼Œ3
+ * 			channel:è®¾å®šå“ªä¸€ä¸ªé¢‘é“} 
  * @return {type} 
  */
-static void ADCx_Mode_Config_auto(ADC_TypeDef * ADCx,char channel){
+static void ADCx_Mode_Config_auto(ADC_TypeDef *ADCx, char channel)
+{
 	ADC_InitTypeDef ADC_InitStruct;
-	
-	ADC_APBxClock_FUN ( ADC_CLK, ENABLE );
+
+	ADC_APBxClock_FUN(ADC_CLK, ENABLE);
 	ADC_InitStruct.ADC_Mode = ADC_Mode_Independent;
 	ADC_InitStruct.ADC_ScanConvMode = DISABLE;
-	ADC_InitStruct.ADC_ContinuousConvMode = DISABLE;	
+	ADC_InitStruct.ADC_ContinuousConvMode = DISABLE;
 	ADC_InitStruct.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
 	ADC_InitStruct.ADC_DataAlign = ADC_DataAlign_Right;
 	ADC_InitStruct.ADC_NbrOfChannel = 1;
-	
+
 	ADC_Init(ADCx, &ADC_InitStruct);
-	
+
 	RCC_ADCCLKConfig(RCC_PCLK2_Div8);
-	ADC_RegularChannelConfig(ADCx, channel, 1, ADC_SampleTime_55Cycles5);
-	
+	ADC_RegularChannelConfig(ADCx, channel, 1, ADC_SampleTime_239Cycles5);
+
 	ADC_ITConfig(ADCx, ADC_IT_EOC, ENABLE);
 	ADC_Cmd(ADCx, ENABLE);
 }
@@ -64,86 +63,92 @@ static void ADCx_Mode_Config_auto(ADC_TypeDef * ADCx,char channel){
 //static void ADCx_Mode_Config(void)
 //{
 //	ADC_InitTypeDef ADC_InitStruct;
-//	
+//
 //	ADC_APBxClock_FUN ( ADC_CLK, ENABLE );
 //	ADC_InitStruct.ADC_Mode = ADC_Mode_Independent;
 //	ADC_InitStruct.ADC_ScanConvMode = DISABLE;
-//	//×Ô¶¯Á¬Ğø×ª»»
-//	ADC_InitStruct.ADC_ContinuousConvMode = ENABLE;	
+//	//è‡ªåŠ¨è¿ç»­è½¬æ¢
+//	ADC_InitStruct.ADC_ContinuousConvMode = ENABLE;
 //	ADC_InitStruct.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
 //	ADC_InitStruct.ADC_DataAlign = ADC_DataAlign_Right;
 //	ADC_InitStruct.ADC_NbrOfChannel = 1;
-//	
+//
 //	ADC_Init(ADC_x, &ADC_InitStruct);
-//	
+//
 //	RCC_ADCCLKConfig(RCC_PCLK2_Div8);
 //	ADC_RegularChannelConfig(ADC_x, ADC_CHANNEL, 1, ADC_SampleTime_55Cycles5);
-//	
+//
 //	ADC_ITConfig(ADC_x, ADC_IT_EOC, ENABLE);
 
 ////	ADC_Cmd(ADC_x, ENABLE);
-//	
-////   // ADC¿ªÊ¼Ğ£×¼
+//
+////   // ADCå¼€å§‹æ ¡å‡†
 //// 	ADC_StartCalibration(ADC_x);
-//// 	// µÈ´ıĞ£×¼Íê³É
+//// 	// ç­‰å¾…æ ¡å‡†å®Œæˆ
 //// 	while(ADC_GetCalibrationStatus(ADC_x));
-//	
+//
 //// 	ADC_SoftwareStartConvCmd(ADC_x, ENABLE);
 //}
 /**
- * @description: //adcÖĞ¶ÏÉèÖÃ
+ * @description: //adcä¸­æ–­è®¾ç½®
  * @param {type} 
  * @return {type} 
  */
 static void ADC_NVIC_Config(void)
 {
-  NVIC_InitTypeDef NVIC_InitStructure;
-	// ÓÅÏÈ¼¶·Ö×é
+	NVIC_InitTypeDef NVIC_InitStructure;
+	// ä¼˜å…ˆçº§åˆ†ç»„
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1);
 
-  // ÅäÖÃÖĞ¶ÏÓÅÏÈ¼¶
-  NVIC_InitStructure.NVIC_IRQChannel = ADC_IRQ;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
-  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
-  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&NVIC_InitStructure);
+	// é…ç½®ä¸­æ–­ä¼˜å…ˆçº§
+	NVIC_InitStructure.NVIC_IRQChannel = ADC_IRQ;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStructure);
 }
 /**
- * @description: //ÉèÖÃadcÖĞ¶Ïº¯ÊıµÄ»Øµ÷º¯Êı
+ * @description: //è®¾ç½®adcä¸­æ–­å‡½æ•°çš„å›è°ƒå‡½æ•°
  * @param {type} 
  * @return {type} 
  */
-void setCallbackFunc(void (*callback)(int )){
-	
-	ADC_callbackFun=callback;
-	
+void setCallbackFunc(void (*callback)(int))
+{
 
+	ADC_callbackFun = callback;
 }
 /**
- * @description: //adc×ª»»¿ªÊ¼£¬×ª»»×Ô¶¯Á¬Ğø½øĞĞ
+ * @description: //adcè½¬æ¢å¼€å§‹ï¼Œè½¬æ¢è‡ªåŠ¨è¿ç»­è¿›è¡Œ
  * @param {type} 
  * @return {type} 
  */
-void ADC_Start(){
-
+void ADC_Start()
+{
 
 	ADC_Cmd(ADC2, ENABLE);
+	 /* Enable ADC1 reset calibration register */   
+ // ADC_ResetCalibration(ADC2);
+  /* Check the end of ADC1 reset calibration register */
+ // while(ADC_GetResetCalibrationStatus(ADC2));
+
 	ADC_StartCalibration(ADC2);
-	
-	while(ADC_GetCalibrationStatus(ADC2));
-	//¿ªÊ¼×ª»»
+	//è¿™é‡Œæ ¡å‡†è¢«å¡ä½
+	while (ADC_GetCalibrationStatus(ADC2))
+		;
+	//å¼€å§‹è½¬æ¢
 	ADC_SoftwareStartConvCmd(ADC2, ENABLE);
-	
 }
 /**
- * @description: //½áÊø×ª»»
+ * @description: //ç»“æŸè½¬æ¢
  * @param {type} 
  * @return {type} 
  */
-void ADC_Stop(){
+void ADC_Stop()
+{
 
 	ADC_Cmd(ADC2, DISABLE);
-
+	
+	
 }
 /**
  * @description: 
@@ -161,27 +166,9 @@ void ADCx_Init(void)
  * @param {type} 
  * @return {type} 
  */
-void ADCx_Init_auto(ADC_TypeDef *  ADCx,char channel){
+void ADCx_Init_auto(ADC_TypeDef *ADCx, char channel)
+{
 	ADC_NVIC_Config();
-	
-	ADCx_Mode_Config_auto(ADCx,channel);
+
+	ADCx_Mode_Config_auto(ADCx, channel);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

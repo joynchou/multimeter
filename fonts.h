@@ -5,8 +5,6 @@
 #include "fonts.h"
 
 
-#define LINE(x) ((x) * (((sFONT *)LCD_GetFont())->Height))
-#define LINEY(x) ((x) * (((sFONT *)LCD_GetFont())->Width))
 
 /** @defgroup FONTS_Exported_Types
   * @{
@@ -23,8 +21,53 @@ extern sFONT Font24x32;
 extern sFONT Font16x24;
 extern sFONT Font8x16;
 
-//要支持中文需要实现本函数，可参考“液晶显示中英文（字库在外部FLASH）”例程
-#define      GetGBKCode( ucBuffer, usChar ) 
+/*******************脰脨脦脛********** 脭脷脧脭脢戮脝脕脡脧脧脭脢戮碌脛脳脰路没麓贸脨隆 ***************************/
+#define      WIDTH_CH_CHAR		                16	    //脰脨脦脛脳脰路没驴铆露脠 
+#define      HEIGHT_CH_CHAR		              	16		  //脰脨脦脛脳脰路没赂脽露脠 
+
+
+
+#define LINE(x) ((x) * (((sFONT *)LCD_GetFont())->Height))
+
+//LINEY脥鲁脪禄脢鹿脫脙潞潞脳脰脳脰脛拢碌脛赂脽露脠
+#define LINEY(x) ((x) * (WIDTH_CH_CHAR))
+
+
+
+
+
+//0卤铆脢戮脢鹿脫脙SD驴篓脳脰脛拢拢卢路脟脕茫卤铆脢戮FLASH脳脰脛拢,脫脡脫脷SD驴篓脳脰脛拢脫脨脦脛录镁脧碌脥鲁拢卢脣脵露脠脗媒潞脺露脿隆拢
+
+#define GBKCODE_FLASH 						1
+
+#if GBKCODE_FLASH
+	/*脢鹿脫脙FLASH脳脰脛拢*/
+	/*脰脨脦脛脳脰驴芒麓忙麓垄脭脷FLASH碌脛脝冒脢录碌脴脰路*/
+	/*FLASH*/
+	#define GBKCODE_START_ADDRESS   387*4096
+
+
+	/*禄帽脠隆脳脰驴芒碌脛潞炉脢媒*/
+	//露篓脪氓禄帽脠隆脰脨脦脛脳脰路没脳脰脛拢脢媒脳茅碌脛潞炉脢媒脙没拢卢ucBuffer脦陋麓忙路脜脳脰脛拢脢媒脳茅脙没拢卢usChar脦陋脰脨脦脛脳脰路没拢篓鹿煤卤锚脗毛拢漏
+	#define      GetGBKCode( ucBuffer, usChar )  GetGBKCode_from_EXFlash( ucBuffer, usChar )  
+	int GetGBKCode_from_EXFlash( uint8_t * pBuffer, uint16_t c);
+
+#else
+	/*脢鹿脫脙SD脳脰脛拢*/
+
+
+	/*SD驴篓脳脰脛拢脗路戮露*/
+	#define GBKCODE_FILE_NAME			"0:/Font/GB2312_H1616.FON"
+
+
+	/*禄帽脠隆脳脰驴芒碌脛潞炉脢媒*/
+	//露篓脪氓禄帽脠隆脰脨脦脛脳脰路没脳脰脛拢脢媒脳茅碌脛潞炉脢媒脙没拢卢ucBuffer脦陋麓忙路脜脳脰脛拢脢媒脳茅脙没拢卢usChar脦陋脰脨脦脛脳脰路没拢篓鹿煤卤锚脗毛拢漏
+
+	#define GetGBKCode( ucBuffer, usChar )  GetGBKCode_from_sd( ucBuffer, usChar )
+	int GetGBKCode_from_sd ( uint8_t * pBuffer, uint16_t c);
+
+#endif
+
 
 
 #endif /*end of __FONT_H    */

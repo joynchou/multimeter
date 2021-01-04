@@ -10,10 +10,13 @@
  * 注意，如果没有使用开启函数，
  * 则该模块不会工作，返回的值也是0或无效值
  * adc采用的是中断+回调函数的方式获取数值
- * 另外，三个表暂时不支持同时工作
+ * 另外，三个表暂时不支持同时工作(因为使用了中断方式读取数据)
  * 
+ * 请定义好电阻的大小，电压表有两个量程，和我们定制的电路板一起工作
+ * 第一个量程为-160 至 +160v 有效精度为 320/4096  v
+ * 第二个量程为-16 至 +16v 有效精度为 32/4096 v 
+ * 量程的切换在电路板上通过拨动开关完成，并需要按下量程切换按钮
  * */
-
 
 /**************头文件**************/
 #include "voltageMeter.h"
@@ -21,46 +24,38 @@
 #include <stddef.h>
 #include "stm32f10x.h"
 #include "public.h"
-
+#include "filter.h"
 /**************宏定义**************/
 #define OPEN 1
 #define CLOSED 0
 
 /**************以下数值自行定义**************/
-//外围电路电阻值，单位k，参见电路图中的电阻标注
-#define R1 1000.0f
-#define R2 101.1f
 
-#define R3 100.0f
-#define R4 100.0f
-#define R5 100.0f
-#define R6 0.997f
-#define R7 2.2f
+//外围电路电阻值，单位k，参见电路图pdf中的电阻标注，实际焊接时根据所测得电阻填写
+#define R7 1000.0f
+#define R11 6.8f
+//提升电压的分压电阻
+#define R45 500.0f
+#define R46 150.0f
 
-#define R16 5.38f
-#define R17 9.92f
+/**************自定义到此为止**************/
 
-//参考电压,在1.65v左右，这样可以直接测量正负16.5v
-#define REF_VOLTAGE ((R16/(R16+R17))*5.0f)
-//衰减倍数，在10倍左右
-#define DAMPING_FACTOR  (R2/(R1+R2))
+//衰减系数，大概在1/148左右
+#define DAMPING_FACTOR (R11 / (R7 + R11))
+
+//提升电压，大概在1.1v左右
+#define REF_VOLTAGE (R46 / (R45 + R46)) * 5.0f
 
 //使用哪一个adc频道，统一使用adc2
-#define    VOLTAGE_ADC_CHANNEL       ADC_Channel_1
+#define VOLTAGE_ADC_CHANNEL ADC_Channel_2
 //adc频道所在的引脚pin和port，查询手册可得知是PA1
-#define   VOLTAGE_ADC_GPIO_PIN       GPIO_Pin_1
-#define   VOLTAGE_ADC_GPIO_PORT      GPIOA
-#define   VOLTAGE_ADC_GPIO_CLK       RCC_APB2Periph_GPIOA 
+#define VOLTAGE_ADC_GPIO_PIN GPIO_Pin_2
+#define VOLTAGE_ADC_GPIO_PORT GPIOA
+#define VOLTAGE_ADC_GPIO_CLK RCC_APB2Periph_GPIOA
 //控制引脚 PB1
-#define VOLTAGE_GPIO_PIN              GPIO_Pin_6
-#define VOLTAGE_GPIO_PORT             GPIOC
-#define VOLTAGE_GPIO_CLK              RCC_APB2Periph_GPIOC
-
-//滤波的数值缓冲大小，越大滤波速度越慢
-#define BUFFER_SIZE 100
-
-/**************自定义数值到此完成**************/
-
+#define VOLTAGE_GPIO_PIN GPIO_Pin_6
+#define VOLTAGE_GPIO_PORT GPIOC
+#define VOLTAGE_GPIO_CLK RCC_APB2Periph_GPIOC
 
 /**************私有变量**************/
 //电压表开关状态
@@ -71,9 +66,11 @@ static float raw_value;
 static float voltage;
 //当前单位
 static unsigned char unit;
-//滤波缓冲池
-static float buffer[BUFFER_SIZE];
-//Array *ar;
+//放大器的放大倍数
+static int ampFactor;
+
+static float inputData[20];
+static float outputData[20];
 /**************函数定义**************/
 
 /**
@@ -81,154 +78,192 @@ static float buffer[BUFFER_SIZE];
  * @param {type} 
  * @return {type} 
  */
-void Voltage_GPIO_Init(){
+void Voltage_GPIO_Init()
+{
 
     //配置一个引脚用于控制输入
-    GPIO_InitTypeDef  GPIO_InitStruct;
-	
-    //array_new(&ar);
-	RCC_APB2PeriphClockCmd(VOLTAGE_GPIO_CLK, ENABLE);
-	GPIO_InitStruct.GPIO_Pin = VOLTAGE_GPIO_PIN;
-	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_Out_PP;
-	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_Init(VOLTAGE_GPIO_PORT, &GPIO_InitStruct);	
+    GPIO_InitTypeDef GPIO_InitStruct;
 
-    
-	
+    //array_new(&ar);
+    // RCC_APB2PeriphClockCmd(VOLTAGE_GPIO_CLK, ENABLE);
+    // GPIO_InitStruct.GPIO_Pin = VOLTAGE_GPIO_PIN;
+    // GPIO_InitStruct.GPIO_Mode = GPIO_Mode_Out_PP;
+    // GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+    // GPIO_Init(VOLTAGE_GPIO_PORT, &GPIO_InitStruct);
 
     //配置adc引脚
-	// 打开 ADC IO端口时钟
-	ADC_GPIO_APBxClock_FUN ( VOLTAGE_ADC_GPIO_CLK, ENABLE );
-	// 配置 ADC IO 引脚模式
-	// 必须为模拟输入
-	GPIO_InitStruct.GPIO_Pin = VOLTAGE_ADC_GPIO_PIN;
-	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AIN;
-	// 初始化 ADC IO
-	GPIO_Init(VOLTAGE_ADC_GPIO_PORT, &GPIO_InitStruct);	
-
-
+    // 打开 ADC IO端口时钟
+    ADC_GPIO_APBxClock_FUN(VOLTAGE_ADC_GPIO_CLK, ENABLE);
+    // 配置 ADC IO 引脚模式
+    // 必须为模拟输入
+    GPIO_InitStruct.GPIO_Pin = VOLTAGE_ADC_GPIO_PIN;
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AIN;
+    // 初始化 ADC IO
+    GPIO_Init(VOLTAGE_ADC_GPIO_PORT, &GPIO_InitStruct);
 }
 /**
- * @description: 
+ * @description: 电压表初始化
  * @param {type} 
  * @return {type} 
  */
-void VoltageMeterInit(){
+void VoltageMeterInit()
+{
 
     Voltage_GPIO_Init();
+    //放大器增益默认为x1
+    ampFactor = 1;
+#ifndef NO_BOARD
+    printf("VoltageMeter is in normal mode\n");
+#else
+    printf("VoltageMeter is in NO_BOARD mode\n");
+#endif
 
-    
-    printf("VoltageMeter Init  done...\n");  
-    
+    printf("VoltageMeter Init  done...\n");
 }
 /**
  * @description: //adc数值更新的回调函数
  * @param {type} 
  * @return {type} 
  */
-static void AdcInterrupt(int value){
+static void AdcInterrupt(int value)
+{
     //更新数值
     ADC_Stop();
-    //中间可以插入滤波语句，在这之间，adc不会更新数值，也不会产生中断
-//    if(array_size(ar)<1000){
-//       // array_add(ar,&value);
-//    }
-//		else{
-//			
-//		}
-    //printf("array size :%d \n",array_size(ar));
-    raw_value=value;
+
+    raw_value = value;
 #ifdef ADC_RAW_VALUE
-    printf("voltageMeter ADC raw :%d \n",value);
+    printf("voltageMeter ADC raw :%d \n", value);
 #endif
     //ADC_Start();
 }
 /**
- * @description: 
+ * @description: 开启电压表
  * @param {type} 
  * @return {type} 
  */
-void openVoltageMeter(){
-   
-    ADCx_Init_auto(ADC2,VOLTAGE_ADC_CHANNEL);
+void openVoltageMeter()
+{
+
+    ADCx_Init_auto(ADC2, VOLTAGE_ADC_CHANNEL);
     setCallbackFunc(AdcInterrupt);
     ADC_Start();
     //添加相应的硬件代码，如开启对应的adc
-    GPIO_SetBits(VOLTAGE_GPIO_PORT,VOLTAGE_GPIO_PIN);
-    state=1;
-    
+    // GPIO_SetBits(VOLTAGE_GPIO_PORT, VOLTAGE_GPIO_PIN);
+    state = 1;
+
 #ifdef DEBUG_MODE
     printf("voltageMeter is open\n");
 #endif
 }
 /**
- * @description: 
+ * @description: 关闭电压表
  * @param {type} 
  * @return {type} 
  */
-void closeVoltageMeter(){
+void closeVoltageMeter()
+{
 
     ADC_Stop();
     //取消回调函数
     setCallbackFunc(NULL);
     //
-    GPIO_ResetBits(VOLTAGE_GPIO_PORT,VOLTAGE_GPIO_PIN);
+    // GPIO_ResetBits(VOLTAGE_GPIO_PORT, VOLTAGE_GPIO_PIN);
     //添加相应的硬件代码，如关闭adc，继电器等
-    state=0;
+    state = 0;
 
 #ifdef DEBUG_MODE
     printf("voltageMeter is closed\n");
 #endif
-
 }
+//多项式拟合校准系数
+#define X3 0.1086f
+#define X2 0.0918f
+#define X1 1.0462f
+#define X0 -0.0016f
 
+int dataPointer = 0;
+float lastVoltage = 0;
 /**
- * @description: //取得电压值，配合getU_Unit使用，用于直接驱动屏幕显示
+ * @description: 取得电压值，配合getU_Unit使用，用于直接驱动屏幕显示
  * @param {type} 
  * @return {type} 
  */
-float getVoltage(){
-    
-		//ADC_Start();
-    
-    if(state){
+float getVoltage()
+{
+
+    int l;
+    //ADC_Start();
+
+    if (state)
+    {
 
 #ifndef SIMULATE_VALUE
-        float adcVoltage=(raw_value/4096.0f)*3.3f;
-        float realVoltage= (adcVoltage-REF_VOLTAGE)/DAMPING_FACTOR;
-        voltage=realVoltage;
-#else 
-        voltage=5.12f;
-        
+
+#ifndef NO_BOARD
+        //adc实测电压
+        float adcVoltage = (raw_value / 4096.0f) * 3.3f;
+
+        //计算后外部设备的实际电压
+        float realVoltage = ((adcVoltage / 1.5f) - REF_VOLTAGE) / (DAMPING_FACTOR * ampFactor);
+        if (dataPointer < 20)
+        {
+            inputData[dataPointer] = (float)realVoltage;
+            dataPointer++;
+            realVoltage = lastVoltage;
+        }
+        else
+        {
+            //对数据进行滤波
+            firFilter(inputData, outputData, 20);
+            dataPointer = 0;
+
+            for (l = 0; l < 20; l++)
+            {
+                realVoltage += outputData[l];
+            }
+            realVoltage /= 20.0f;
+            lastVoltage = realVoltage;
+        }
+#else
+        float realVoltage = (raw_value / 4096.0f) * 3.3f;
+#endif
+        voltage = realVoltage;
+#else
+        voltage = 5.12f;
+
 #endif
 
 #ifdef DEBUG_MODE
-    printf("voltage is :  %f v \n",voltage);
+        printf("voltage is :  %f v \n", voltage);
 #endif
-		ADC_Start();
-    return voltage ;
+
+        ADC_Start();
+        return voltage;
     }
-    else{
+    else
+    {
         return 0;
     }
-		
 }
 /**
- * @description: 
+ * @description: 获得当前数值的单位
  * @param {type} 
  * @return {type} 
  */
-unsigned char getU_Unit(){
-    
-    if(state){
-        if(voltage>1)
+unsigned char getU_Unit()
+{
+
+    if (state)
+    {
+        if (voltage > 1)
         {
             return UNIT_V;
         }
-        else if(voltage<1 &&voltage>0.001){
+        else if (voltage < 1 && voltage > 0.001)
+        {
             return UNIT_MV;
         }
-        else if (voltage<0.001)
+        else if (voltage < 0.001)
         {
             return UNIT_UV;
         }
@@ -236,12 +271,29 @@ unsigned char getU_Unit(){
         {
             return UNIT_V;
         }
-        
-        
     }
-    else{
+    else
+    {
         return 0;
     }
+}
+/**
+ * @description: 改变放大器的放大倍数
+ * @param {int} factor
+ * @return {*}
+ */
+void changeVoltageFactor(int factor)
+{
+    ampFactor = factor;
+}
+/** 
+ * @description: 获得当前放大器的放大倍数
+ * @param {*}
+ * @return {*}
+ */
+int getVoltageFactor()
+{
+    return ampFactor;
 }
 
 /**
@@ -249,9 +301,11 @@ unsigned char getU_Unit(){
  * @param {type} 
  * @return {type} 
  */
-void VoltageMeterLooper(){
+void VoltageMeterLooper()
+{
+    int l = 0;
     //放置能更新value的语句
-    if(state){
-
+    if (state)
+    {
     }
 }

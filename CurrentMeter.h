@@ -19,4 +19,6 @@ void closeCurrentMeter();
 float getCurrent();
 unsigned char getI_Unit();
 void CurrentMeterLooper();
+void changeCurrentFactor(int factor);
+int getCurrentFactor();
 #endif

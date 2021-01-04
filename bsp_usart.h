@@ -1,46 +1,44 @@
 #ifndef __USART_H
-#define	__USART_H
-
+#define __USART_H
 
 #include "stm32f10x.h"
 #include <stdio.h>
 
 /** 
-  * ¥Æø⁄∫Í∂®“Â£¨≤ªÕ¨µƒ¥Æø⁄π“‘ÿµƒ◊‹œﬂ∫ÕIO≤ª“ª—˘£¨“∆÷≤ ±–Ë“™–ﬁ∏ƒ’‚º∏∏ˆ∫Í
-	* 1-–ﬁ∏ƒ◊‹œﬂ ±÷”µƒ∫Í£¨uart1π“‘ÿµΩapb2◊‹œﬂ£¨∆‰À˚uartπ“‘ÿµΩapb1◊‹œﬂ
-	* 2-–ﬁ∏ƒGPIOµƒ∫Í
+  * ‰∏≤Âè£ÂÆèÂÆö‰πâÔºå‰∏çÂêåÁöÑ‰∏≤Âè£ÊåÇËΩΩÁöÑÊÄªÁ∫øÂíåIO‰∏ç‰∏ÄÊ†∑ÔºåÁßªÊ§çÊó∂ÈúÄË¶Å‰øÆÊîπËøôÂá†‰∏™ÂÆè
+	* 1-‰øÆÊîπÊÄªÁ∫øÊó∂ÈíüÁöÑÂÆèÔºåuart1ÊåÇËΩΩÂà∞apb2ÊÄªÁ∫øÔºåÂÖ∂‰ªñuartÊåÇËΩΩÂà∞apb1ÊÄªÁ∫ø
+	* 2-‰øÆÊîπGPIOÁöÑÂÆè
   */
-	
-// ¥Æø⁄1-USART1
-#define  DEBUG_USARTx                   USART1
-#define  DEBUG_USART_CLK                RCC_APB2Periph_USART1
-#define  DEBUG_USART_APBxClkCmd         RCC_APB2PeriphClockCmd
-#define  DEBUG_USART_BAUDRATE           115200
 
-// USART GPIO “˝Ω≈∫Í∂®“Â
-#define  DEBUG_USART_GPIO_CLK           (RCC_APB2Periph_GPIOA)
-#define  DEBUG_USART_GPIO_APBxClkCmd    RCC_APB2PeriphClockCmd
-    
-#define  DEBUG_USART_TX_GPIO_PORT         GPIOA   
-#define  DEBUG_USART_TX_GPIO_PIN          GPIO_Pin_9
-#define  DEBUG_USART_RX_GPIO_PORT       GPIOA
-#define  DEBUG_USART_RX_GPIO_PIN        GPIO_Pin_10
+// ‰∏≤Âè£1-USART1
+#define DEBUG_USARTx USART1
+#define DEBUG_USART_CLK RCC_APB2Periph_USART1
+#define DEBUG_USART_APBxClkCmd RCC_APB2PeriphClockCmd
+#define DEBUG_USART_BAUDRATE 115200
 
-#define  DEBUG_USART_IRQ                USART1_IRQn
-#define  DEBUG_USART_IRQHandler         USART1_IRQHandler
+// USART GPIO ÂºïËÑöÂÆèÂÆö‰πâ
+#define DEBUG_USART_GPIO_CLK (RCC_APB2Periph_GPIOA)
+#define DEBUG_USART_GPIO_APBxClkCmd RCC_APB2PeriphClockCmd
 
+#define DEBUG_USART_TX_GPIO_PORT GPIOA
+#define DEBUG_USART_TX_GPIO_PIN GPIO_Pin_9
+#define DEBUG_USART_RX_GPIO_PORT GPIOA
+#define DEBUG_USART_RX_GPIO_PIN GPIO_Pin_10
 
-// ¥Æø⁄2-USART2
+#define DEBUG_USART_IRQ USART1_IRQn
+#define DEBUG_USART_IRQHandler USART1_IRQHandler
+
+// ‰∏≤Âè£2-USART2
 //#define  DEBUG_USARTx                   USART2
 //#define  DEBUG_USART_CLK                RCC_APB1Periph_USART2
 //#define  DEBUG_USART_APBxClkCmd         RCC_APB1PeriphClockCmd
 //#define  DEBUG_USART_BAUDRATE           115200
 
-//// USART GPIO “˝Ω≈∫Í∂®“Â
+//// USART GPIO ÂºïËÑöÂÆèÂÆö‰πâ
 //#define  DEBUG_USART_GPIO_CLK           (RCC_APB2Periph_GPIOA)
 //#define  DEBUG_USART_GPIO_APBxClkCmd    RCC_APB2PeriphClockCmd
-//    
-//#define  DEBUG_USART_TX_GPIO_PORT         GPIOA   
+//
+//#define  DEBUG_USART_TX_GPIO_PORT         GPIOA
 //#define  DEBUG_USART_TX_GPIO_PIN          GPIO_Pin_2
 //#define  DEBUG_USART_RX_GPIO_PORT       GPIOA
 //#define  DEBUG_USART_RX_GPIO_PIN        GPIO_Pin_3
@@ -48,17 +46,17 @@
 //#define  DEBUG_USART_IRQ                USART2_IRQn
 //#define  DEBUG_USART_IRQHandler         USART2_IRQHandler
 
-// ¥Æø⁄3-USART3
+// ‰∏≤Âè£3-USART3
 //#define  DEBUG_USARTx                   USART3
 //#define  DEBUG_USART_CLK                RCC_APB1Periph_USART3
 //#define  DEBUG_USART_APBxClkCmd         RCC_APB1PeriphClockCmd
 //#define  DEBUG_USART_BAUDRATE           115200
 
-//// USART GPIO “˝Ω≈∫Í∂®“Â
+//// USART GPIO ÂºïËÑöÂÆèÂÆö‰πâ
 //#define  DEBUG_USART_GPIO_CLK           (RCC_APB2Periph_GPIOB)
 //#define  DEBUG_USART_GPIO_APBxClkCmd    RCC_APB2PeriphClockCmd
-//    
-//#define  DEBUG_USART_TX_GPIO_PORT         GPIOB   
+//
+//#define  DEBUG_USART_TX_GPIO_PORT         GPIOB
 //#define  DEBUG_USART_TX_GPIO_PIN          GPIO_Pin_10
 //#define  DEBUG_USART_RX_GPIO_PORT       GPIOB
 //#define  DEBUG_USART_RX_GPIO_PIN        GPIO_Pin_11
@@ -66,17 +64,17 @@
 //#define  DEBUG_USART_IRQ                USART3_IRQn
 //#define  DEBUG_USART_IRQHandler         USART3_IRQHandler
 
-// ¥Æø⁄4-UART4
+// ‰∏≤Âè£4-UART4
 //#define  DEBUG_USARTx                   UART4
 //#define  DEBUG_USART_CLK                RCC_APB1Periph_UART4
 //#define  DEBUG_USART_APBxClkCmd         RCC_APB1PeriphClockCmd
 //#define  DEBUG_USART_BAUDRATE           115200
 
-//// USART GPIO “˝Ω≈∫Í∂®“Â
+//// USART GPIO ÂºïËÑöÂÆèÂÆö‰πâ
 //#define  DEBUG_USART_GPIO_CLK           (RCC_APB2Periph_GPIOC)
 //#define  DEBUG_USART_GPIO_APBxClkCmd    RCC_APB2PeriphClockCmd
-//    
-//#define  DEBUG_USART_TX_GPIO_PORT         GPIOC   
+//
+//#define  DEBUG_USART_TX_GPIO_PORT         GPIOC
 //#define  DEBUG_USART_TX_GPIO_PIN          GPIO_Pin_10
 //#define  DEBUG_USART_RX_GPIO_PORT       GPIOC
 //#define  DEBUG_USART_RX_GPIO_PIN        GPIO_Pin_11
@@ -84,25 +82,23 @@
 //#define  DEBUG_USART_IRQ                UART4_IRQn
 //#define  DEBUG_USART_IRQHandler         UART4_IRQHandler
 
-
-// ¥Æø⁄5-UART5
+// ‰∏≤Âè£5-UART5
 //#define  DEBUG_USARTx                   UART5
 //#define  DEBUG_USART_CLK                RCC_APB1Periph_UART5
 //#define  DEBUG_USART_APBxClkCmd         RCC_APB1PeriphClockCmd
 //#define  DEBUG_USART_BAUDRATE           115200
 
-//// USART GPIO “˝Ω≈∫Í∂®“Â
+//// USART GPIO ÂºïËÑöÂÆèÂÆö‰πâ
 //#define  DEBUG_USART_GPIO_CLK           (RCC_APB2Periph_GPIOC|RCC_APB2Periph_GPIOD)
 //#define  DEBUG_USART_GPIO_APBxClkCmd    RCC_APB2PeriphClockCmd
-//    
-//#define  DEBUG_USART_TX_GPIO_PORT         GPIOC   
+//
+//#define  DEBUG_USART_TX_GPIO_PORT         GPIOC
 //#define  DEBUG_USART_TX_GPIO_PIN          GPIO_Pin_12
 //#define  DEBUG_USART_RX_GPIO_PORT       GPIOD
 //#define  DEBUG_USART_RX_GPIO_PIN        GPIO_Pin_2
 
 //#define  DEBUG_USART_IRQ                UART5_IRQn
 //#define  DEBUG_USART_IRQHandler         UART5_IRQHandler
-
 
 void USART_Config(void);
 
