@@ -10,7 +10,7 @@
 #include "stm32f10x.h"
 #include "bsp_adc.h"
 #include "public.h"
-
+#include <math.h>
 /**************宏定义**************/
 
 /**************以下数值自行定义**************/
@@ -181,15 +181,15 @@ unsigned char getI_Unit()
     if (state)
     {
 
-        if (current > 1)
+        if (abs(current) > 1.0f)
         {
             return UNIT_A;
         }
-        else if (current < 1 && current > 0.001)
+        else if (abs(current) < 1 && abs(current) > 0.001)
         {
             return UNIT_MA;
         }
-        else if (current < 0.001)
+        else if (abs(current) < 0.001)
         {
             return UNIT_UA;
         }

@@ -116,10 +116,10 @@ void buttonLooper()
 		{
 			(*holdButtonFunc)();
 			//按hold键led灯会反转
-			LED_G_TOGGLE;
+			
 		}
 	}
-
+	//暂时没有实体按键对应切换量程
 	if (changeFactorButtonFunc != NULL)
 	{
 		//加入判断按键按下的语句

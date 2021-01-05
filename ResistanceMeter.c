@@ -34,9 +34,10 @@
 
 /**************变量声明**************/
 //私有变量
-static unsigned char state;
-static float raw_value;
-static unsigned char unit;
+static unsigned char state = 0;
+static float raw_value = 0;
+static float Res = 0;
+static unsigned char unit = UNIT_KOHM;
 //放大器的放大倍数
 static int ampFactor;
 
@@ -91,7 +92,7 @@ static void AdcInterrupt(int value)
  * @param {type} 
  * @return {type} 
  */
-void ResistanceMeter_ADC_Init()
+static void ResistanceMeter_ADC_Init()
 {
     ADCx_Init_auto(ADC2, RESISTANCE_ADC_CHANNEL);
     ampFactor = 1;
@@ -174,12 +175,15 @@ float getCurrentRes()
     //y=0.0722x3 + 0.1771x2 + 0.998x + 0.0015
 #ifndef SIMULATE_VALUE
     int l;
+    float adjValue = 0;
     float adcVoltage = (raw_value / 4096.0f) * 3.3f;
     float RxVoltage = (adcVoltage / (1.5f * ampFactor));
-    float res;
+    float res; //单位为k
     RxVoltage = X3 * pow(RxVoltage, 3) + X2 * pow(RxVoltage, 2) + X1 * RxVoltage + X0;
 
     res = (R19 * RxVoltage) / (VCC - RxVoltage);
+//todo:在开启数字滤波后会出现hardfault，猜测可能和数组越界有关，但是还没有确定
+#ifdef USE_FIR
     if (dataPointer < 20)
     {
         inputData[dataPointer] = (float)res;
@@ -198,11 +202,30 @@ float getCurrentRes()
         res /= 20.0f;
         lastRes = res;
     }
-#ifdef DEBUG_MODE
-    printf("Res is :%f omh \n", res * 1000);
 #endif
+
+    Res = res * 1000.0f;
+#ifdef DEBUG_MODE
+    printf("Res is :%f omh \n", Res);
+#endif
+    //值小于1k
+    if (res < 1.0f)
+    {
+        adjValue = res * 1000.0f;
+    }
+    //值大于1k小于1M
+    else if (res > 1.0f && res < 1000.0f)
+    {
+        adjValue = res;
+    }
+    //值大于1M
+    else if (res > 1000.0f)
+    {
+        adjValue = res / 1000.0f;
+    }
+
     ADC_Start();
-    return res * 1000;
+    return adjValue;
 #else
     return 1200.0f;
 #endif
@@ -214,8 +237,24 @@ float getCurrentRes()
  */
 unsigned char getR_Unit()
 {
-
-    return unit;
+    //如果小于1k，单位为R
+    if (Res < 1000.0f)
+    {
+        return UNIT_OHM;
+    }
+    //如果大于1k小于1M，单位为KR
+    else if (Res > 1000.0f && Res < 1000000.0f)
+    {
+            return UNIT_KOHM;
+    }
+    //如果大于1M，单位为MR
+    else if (Res > 1000000.0f)
+    {
+        return UNIT_MOHM;
+    }
+    else {
+        return UNIT_OHM;
+    }
 }
 void changeResistanceFactor(int factor)
 {

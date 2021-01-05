@@ -39,7 +39,7 @@ Version-Date---Author-Explanation
 #include "LCD_Private.h"      /* private modul definitions & config */
 #include "GUI_Private.h"
 #include "GUIDebug.h"
-
+#include <math.h>
 #include "bsp_ili9341_lcd.h"
 // #if (LCD_CONTROLLER == -1) \
 //     && (!defined(WIN32) | defined(LCD_SIMCONTROLLER))
@@ -483,10 +483,53 @@ void LCD_L0_DrawVLine  (int x, int y0,  int y1) {
 *       LCD_L0_FillRect
 */
 void LCD_L0_FillRect(int x0, int y0, int x1, int y1) {
-  for (; y0 <= y1; y0++) {
+  
+//	int x0Phys;
+//	int y0Phys;
+//	
+//	int x1Phys;
+//	int y1Phys;
+//	int width ;
+//	int height ;
+//	int x,y;
+//  GUI_USE_PARA(x0);
+//  GUI_USE_PARA(y0);
+//  GUI_USE_PARA(LCD_COLORINDEX);
+//  /* Convert logical into physical coordinates (Dep. on LCDConf.h) */
+//  #if LCD_SWAP_XY | LCD_MIRROR_X| LCD_MIRROR_Y
+//     x0Phys = LOG2PHYS_X(x0, y0);
+//     y0Phys = LOG2PHYS_Y(x0, y0);
+//			
+//			x1Phys = LOG2PHYS_X(x1, y1);
+//     y1Phys = LOG2PHYS_Y(x1, y1);
+//  #else
+//    #define x0Phys x0
+//    #define y0Phys y0
+//	
+//	 #define x1Phys x1
+//    #define y1Phys y1
+//  #endif
+	
+	for (; y0 <= y1; y0++) {
     LCD_L0_DrawHLine(x0, y0, x1);
   }
-  //ILI9341_DrawRectangle(x0,y0,x1,y1);
+//	 width=(int)abs(x1-x0);
+//	 height=(int)abs(y1-y0);
+
+//	if(x1>=x0){
+//		x=x0;
+//	}
+//	else{
+//		x=x1;
+//	}
+//	if(y1>=y0){
+//		y=y0;
+//	}
+//	else{
+//		y=y1;
+//	}
+//	LCD_SetTextColor(LCD_COLORINDEX);
+//  ILI9341_DrawRectangle(x0,y0,height,width,1);
   
 }
 

@@ -25,6 +25,7 @@
 #include "stm32f10x.h"
 #include "public.h"
 #include "filter.h"
+#include <math.h>
 /**************宏定义**************/
 #define OPEN 1
 #define CLOSED 0
@@ -62,7 +63,7 @@
 static unsigned char state;
 //adc输出值
 static float raw_value;
-//真实电压值，单位v
+//真实电压值，但是单位会随着值的不同而改变
 static float voltage;
 //当前单位
 static unsigned char unit;
@@ -192,6 +193,8 @@ float getVoltage()
 {
 
     int l;
+    float adjVoltage;
+    float fabsVoltage;
     //ADC_Start();
 
     if (state)
@@ -200,6 +203,8 @@ float getVoltage()
 #ifndef SIMULATE_VALUE
 
 #ifndef NO_BOARD
+
+#ifdef USE_FIR
         //adc实测电压
         float adcVoltage = (raw_value / 4096.0f) * 3.3f;
 
@@ -224,6 +229,15 @@ float getVoltage()
             realVoltage /= 20.0f;
             lastVoltage = realVoltage;
         }
+
+#else
+        //adc实测电压
+        float adcVoltage = (raw_value / 4096.0f) * 3.3f;
+
+        //计算后外部设备的实际电压
+        float realVoltage = ((adcVoltage / 1.5f) - REF_VOLTAGE) / (DAMPING_FACTOR * ampFactor);
+#endif
+
 #else
         float realVoltage = (raw_value / 4096.0f) * 3.3f;
 #endif
@@ -232,13 +246,35 @@ float getVoltage()
         voltage = 5.12f;
 
 #endif
-
+#define ZERO 0.0000001f
 #ifdef DEBUG_MODE
         printf("voltage is :  %f v \n", voltage);
 #endif
 
+        //最后自动根据数值大小放大数值
+        //v
+        fabsVoltage=fabs(voltage);
+        if (fabsVoltage - 1.0f > ZERO)
+        {
+            adjVoltage = voltage;
+        }
+        //mv
+        else if (fabsVoltage - 1.0f < ZERO && fabsVoltage - 0.001f > ZERO)
+        {
+            adjVoltage = voltage * 1000.0f;
+        }
+        //uv
+        else if (fabsVoltage - 0.001f < ZERO)
+        {
+            adjVoltage = voltage * 1000000.0f;
+        }
+        else
+        {
+        }
+
         ADC_Start();
-        return voltage;
+
+        return adjVoltage;
     }
     else
     {
@@ -255,16 +291,19 @@ unsigned char getU_Unit()
 
     if (state)
     {
-        if (voltage > 1)
+        if (fabs(voltage) - 1.0f > ZERO)
         {
+
             return UNIT_V;
         }
-        else if (voltage < 1 && voltage > 0.001)
+        else if (fabs(voltage) - 1.0f < ZERO && fabs(voltage) - 0.001f > ZERO)
         {
+            // voltage*1000.0f;
             return UNIT_MV;
         }
-        else if (voltage < 0.001)
+        else if (fabs(voltage) - 0.001f < ZERO)
         {
+            // voltage*1000000.0f;
             return UNIT_UV;
         }
         else

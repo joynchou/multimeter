@@ -27,15 +27,25 @@ void onHoldButtonClicked();
 void onModeButtonClicked();
 
 /**************函数定义**************/
+/**
+ * @description: 实体按键扫描线程
+ * @param {void} *parameter
+ * @return {*}
+ */
 void buttonThread(void *parameter)
 {
     while (1)
     {
         buttonLooper();
 
-        rt_thread_mdelay(200);
+        rt_thread_mdelay(30);
     }
 }
+/**
+ * @description: 触屏扫描线程
+ * @param {void} *parameter
+ * @return {*}
+ */
 void touchScreenThread(void *parameter)
 {
     while (1)
@@ -45,29 +55,58 @@ void touchScreenThread(void *parameter)
         rt_thread_mdelay(10);
     }
 }
+/**
+ * @description: tft刷新线程
+ * @param {void} *parameter
+ * @return {*}
+ */
 void tftUpdateThread(void *parameter)
 {
     while (1)
     {
 
-        mainLoop();
-        rt_thread_mdelay(100);
+        //mainLoop();
+        GUI_Exec(); //调用UCGUI TOUCH相关函数
+        rt_thread_mdelay(90);
+    }
+}
+/**
+ * @description: 各个模块数值更新线程
+ * @param {void} *parameter
+ * @return {*}
+ */
+void valueUpdateThread(void *parameter)
+{
+
+    while (1)
+    {
+        valueUpdateLooper();
+        rt_thread_mdelay(200);
     }
 }
 
+void setSystem(void *parameter)
+{
+    switchMode(MODE_VOLTAGE);
+}
+//各个线程的句柄和栈
 static struct rt_thread tftUpdateThread_ptr;
-static rt_uint8_t tftUpdateThread_stack[1000];
+static rt_uint8_t tftUpdateThread_stack[2000];
 
 static struct rt_thread touchScreenThread_ptr;
 static rt_uint8_t touchScreenThread_stack[800];
 
 static struct rt_thread buttonThread_ptr;
-static rt_uint8_t buttonThread_stack[200];
+static rt_uint8_t buttonThread_stack[800];
+
+static struct rt_thread ValueThread_ptr;
+static rt_uint8_t ValueThread_stack[1800];
 
 int main()
 {
 
     rt_err_t result;
+    rt_thread_t settingPtr;
     init();
 
     /* 启动线程 */
@@ -76,7 +115,7 @@ int main()
                             "touchScreenThread",
                             touchScreenThread, RT_NULL,
                             &touchScreenThread_stack[0], sizeof(touchScreenThread_stack),
-                            0, 100);
+                            1, 100);
 
     /* 启动线程 */
     result = rt_thread_init(&buttonThread_ptr,
@@ -89,8 +128,14 @@ int main()
                             "tftUpdateThread",
                             tftUpdateThread, RT_NULL,
                             &tftUpdateThread_stack[0], sizeof(tftUpdateThread_stack),
-                            7, 100);
+                            2, 100);
+    result = rt_thread_init(&ValueThread_ptr,
+                            "ValueThread",
+                            valueUpdateThread, RT_NULL,
+                            &ValueThread_stack[0], sizeof(ValueThread_stack),
+                            0, 1000);
 
+    settingPtr = rt_thread_create("setting", setSystem, RT_NULL, 600, 3, 100);
     rt_thread_startup(&tftUpdateThread_ptr);
     printf("tftUpdateThread created\n");
 
@@ -99,7 +144,12 @@ int main()
 
     rt_thread_startup(&buttonThread_ptr);
     printf("button scan thread created\n");
+    rt_thread_startup(&ValueThread_ptr);
+    printf("Value thread created\n");
+    rt_thread_startup(settingPtr);
 
+    //设置初始模式为电压表
+    switchMode(MODE_VOLTAGE);
     return 0;
 }
 
@@ -116,11 +166,13 @@ void init()
     DSP_Init();
     //GUI初始化
     GUIInit();
-    GUI_Init();
+    //主界面ui初始化
+    MainPageInit();
 
-    MainTask();
-
+    //显示鼠标
+#ifdef SHOW_MOUSE
     GUI_CURSOR_Show();
+#endif
     //按键初始化
     buttonInit();
 
@@ -132,9 +184,6 @@ void init()
     //设置按键回调函数
     setHoldButtonListener(onHoldButtonClicked);
     setModeButtonListener(onModeButtonClicked);
-
-    //设置初始模式为电压表
-    //switchMode(MODE_VOLTAGE);
 }
 /**
  * @description: 数值更新函数，根据当前模式自动开启相应的模块并更新屏幕显示
@@ -201,6 +250,7 @@ void switchMode(unsigned char mode)
     case MODE_VOLTAGE:
         currentMode = MODE_VOLTAGE;
         setDisplayMode(MODE_VOLTAGE);
+
         //打开和关闭相应的模块
         closeCurrentMeter();
         closeResistanceMeter();

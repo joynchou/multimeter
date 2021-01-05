@@ -38,6 +38,11 @@ void clearWindow();
 void setNumTitle(float num);
 //设置单位
 void setUnit(unsigned char unit);
+
+
+void setRange(int mode);
 void GUIInit();
 
+void setMeterMode(int mode);
+int getMeterMode();
 #endif

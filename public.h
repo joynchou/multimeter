@@ -29,4 +29,6 @@
 //可以用来做测试
 //#define NO_BOARD
 
+//是否使用数字滤波，使用后刷新速度会变慢
+//#define USE_FIR
 #endif
